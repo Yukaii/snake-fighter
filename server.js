@@ -410,7 +410,7 @@ class GameRoom {
     }
 
     const now = Date.now()
-    return (now - player.lastObstaclePlacement) >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
+    return now - player.lastObstaclePlacement >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
   }
 
   placePlayerObstacle(playerId) {
@@ -422,11 +422,11 @@ class GameRoom {
     // Remove tail segment and convert to dotted obstacle
     const tail = player.snake.pop()
     if (tail) {
-      this.obstacles.push({ 
-        x: tail.x, 
-        y: tail.y, 
+      this.obstacles.push({
+        x: tail.x,
+        y: tail.y,
         type: 'dotted',
-        placedBy: playerId 
+        placedBy: playerId,
       })
 
       player.lastObstaclePlacement = Date.now()
@@ -434,7 +434,7 @@ class GameRoom {
 
       io.to(this.id).emit('obstacle-placed', {
         playerId: playerId,
-        obstacle: { x: tail.x, y: tail.y, type: 'dotted' }
+        obstacle: { x: tail.x, y: tail.y, type: 'dotted' },
       })
 
       return true

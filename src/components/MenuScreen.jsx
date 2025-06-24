@@ -87,7 +87,10 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
         </button>
       </div>
 
-      <div className="form-group" style={{ marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}>
+      <div
+        className="form-group"
+        style={{ marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}
+      >
         <button
           type="button"
           className="btn btn-local"
@@ -96,12 +99,12 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
             backgroundColor: '#9C27B0',
             color: 'white',
             width: '100%',
-            marginBottom: '10px'
+            marginBottom: '10px',
           }}
         >
           🎮 Local 2-Player Mode
         </button>
-        
+
         <button
           type="button"
           className="btn btn-ai"
@@ -109,7 +112,7 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
           style={{
             backgroundColor: '#FF9800',
             color: 'white',
-            width: '100%'
+            width: '100%',
           }}
         >
           🤖 vs AI Mode

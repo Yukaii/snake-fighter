@@ -69,23 +69,44 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     )
   }
 
-  const isPositionFree = (x, y, excludeSnakes = false, currentObstacles = obstacles, currentSeeds = seeds, currentPlayer1 = player1, currentPlayer2 = player2) => {
+  const isPositionFree = (
+    x,
+    y,
+    excludeSnakes = false,
+    currentObstacles = obstacles,
+    currentSeeds = seeds,
+    currentPlayer1 = player1,
+    currentPlayer2 = player2
+  ) => {
     // Check obstacles
-    if (currentObstacles && currentObstacles.some(obstacle => obstacle.x === x && obstacle.y === y)) {
+    if (
+      currentObstacles &&
+      currentObstacles.some((obstacle) => obstacle.x === x && obstacle.y === y)
+    ) {
       return false
     }
 
     // Check seeds
-    if (currentSeeds && currentSeeds.some(seed => seed.x === x && seed.y === y)) {
+    if (currentSeeds && currentSeeds.some((seed) => seed.x === x && seed.y === y)) {
       return false
     }
 
     if (!excludeSnakes) {
       // Check both snakes
-      if (currentPlayer1 && currentPlayer1.alive && currentPlayer1.snake && currentPlayer1.snake.some(segment => segment.x === x && segment.y === y)) {
+      if (
+        currentPlayer1 &&
+        currentPlayer1.alive &&
+        currentPlayer1.snake &&
+        currentPlayer1.snake.some((segment) => segment.x === x && segment.y === y)
+      ) {
         return false
       }
-      if (currentPlayer2 && currentPlayer2.alive && currentPlayer2.snake && currentPlayer2.snake.some(segment => segment.x === x && segment.y === y)) {
+      if (
+        currentPlayer2 &&
+        currentPlayer2.alive &&
+        currentPlayer2.snake &&
+        currentPlayer2.snake.some((segment) => segment.x === x && segment.y === y)
+      ) {
         return false
       }
     }
@@ -100,11 +121,15 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     const maxAttempts = 100
 
     while (attempts < maxAttempts) {
-      const x = Math.floor(Math.random() * (GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.GRID_SIZE)) * GAME_CONFIG.GRID_SIZE
-      const y = Math.floor(Math.random() * (GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.GRID_SIZE)) * GAME_CONFIG.GRID_SIZE
+      const x =
+        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.GRID_SIZE)) *
+        GAME_CONFIG.GRID_SIZE
+      const y =
+        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.GRID_SIZE)) *
+        GAME_CONFIG.GRID_SIZE
 
       if (isPositionFree(x, y)) {
-        setSeeds(prev => [...prev, { x, y }])
+        setSeeds((prev) => [...prev, { x, y }])
         break
       }
       attempts++
@@ -114,7 +139,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   const canPlaceObstacle = (player) => {
     if (!player.alive || player.snake.length <= 1) return false
     const now = Date.now()
-    return (now - player.lastObstaclePlacement) >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
+    return now - player.lastObstaclePlacement >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
   }
 
   const placeObstacle = (playerNum) => {
@@ -123,28 +148,30 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
 
     if (!canPlaceObstacle(player)) return
 
-    setPlayer(prev => {
+    setPlayer((prev) => {
       const newSnake = [...prev.snake]
       const tail = newSnake.pop()
 
       if (tail) {
-        setObstacles(prevObstacles => [...prevObstacles, {
-          x: tail.x,
-          y: tail.y,
-          type: 'dotted',
-          placedBy: playerNum
-        }])
+        setObstacles((prevObstacles) => [
+          ...prevObstacles,
+          {
+            x: tail.x,
+            y: tail.y,
+            type: 'dotted',
+            placedBy: playerNum,
+          },
+        ])
       }
 
       return {
         ...prev,
         snake: newSnake,
         score: Math.max(0, newSnake.length - 1),
-        lastObstaclePlacement: Date.now()
+        lastObstaclePlacement: Date.now(),
       }
     })
   }
-
 
   const calculateAIDirection = (aiPlayer, humanPlayer, currentSeeds, currentObstacles) => {
     if (!aiPlayer.alive) return aiPlayer.direction
@@ -152,37 +179,44 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     const head = aiPlayer.snake[0]
     const possibleDirections = [
       { x: 0, y: -1 }, // up
-      { x: 0, y: 1 },  // down
+      { x: 0, y: 1 }, // down
       { x: -1, y: 0 }, // left
-      { x: 1, y: 0 }   // right
+      { x: 1, y: 0 }, // right
     ]
 
     // Filter out 180-degree turns
-    const validDirections = possibleDirections.filter(dir => {
+    const validDirections = possibleDirections.filter((dir) => {
       return !(dir.x === -aiPlayer.direction.x && dir.y === -aiPlayer.direction.y)
     })
 
     // Helper function to check if position is safe
     const isPositionSafe = (pos, lookahead = 0) => {
       // Check walls
-      if (pos.x < 0 || pos.x >= GAME_CONFIG.CANVAS_WIDTH ||
-          pos.y < 0 || pos.y >= GAME_CONFIG.CANVAS_HEIGHT) {
+      if (
+        pos.x < 0 ||
+        pos.x >= GAME_CONFIG.CANVAS_WIDTH ||
+        pos.y < 0 ||
+        pos.y >= GAME_CONFIG.CANVAS_HEIGHT
+      ) {
         return false
       }
 
       // Check obstacles
-      if (currentObstacles.some(obs => obs.x === pos.x && obs.y === pos.y)) {
+      if (currentObstacles.some((obs) => obs.x === pos.x && obs.y === pos.y)) {
         return false
       }
 
       // Check self collision
-      if (aiPlayer.snake.some(segment => segment.x === pos.x && segment.y === pos.y)) {
+      if (aiPlayer.snake.some((segment) => segment.x === pos.x && segment.y === pos.y)) {
         return false
       }
 
       // Check human player collision
-      if (humanPlayer && humanPlayer.alive && humanPlayer.snake.some(segment =>
-          segment.x === pos.x && segment.y === pos.y)) {
+      if (
+        humanPlayer &&
+        humanPlayer.alive &&
+        humanPlayer.snake.some((segment) => segment.x === pos.x && segment.y === pos.y)
+      ) {
         return false
       }
 
@@ -195,7 +229,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
       const queue = [startPos]
       let spaceCount = 0
 
-      while (queue.length > 0 && spaceCount < 50) { // Limit search to prevent lag
+      while (queue.length > 0 && spaceCount < 50) {
+        // Limit search to prevent lag
         const pos = queue.shift()
         const key = `${pos.x},${pos.y}`
 
@@ -211,7 +246,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           { x: pos.x, y: pos.y - GAME_CONFIG.GRID_SIZE },
           { x: pos.x, y: pos.y + GAME_CONFIG.GRID_SIZE },
           { x: pos.x - GAME_CONFIG.GRID_SIZE, y: pos.y },
-          { x: pos.x + GAME_CONFIG.GRID_SIZE, y: pos.y }
+          { x: pos.x + GAME_CONFIG.GRID_SIZE, y: pos.y },
         ]
 
         for (const neighbor of neighbors) {
@@ -225,10 +260,10 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     }
 
     // Calculate safety score for each direction
-    const directionScores = validDirections.map(direction => {
+    const directionScores = validDirections.map((direction) => {
       const nextHead = {
         x: head.x + direction.x * GAME_CONFIG.GRID_SIZE,
-        y: head.y + direction.y * GAME_CONFIG.GRID_SIZE
+        y: head.y + direction.y * GAME_CONFIG.GRID_SIZE,
       }
 
       let score = 0
@@ -249,7 +284,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         for (let lookahead = 1; lookahead <= 5; lookahead++) {
           const futureHead = {
             x: currentPos.x + direction.x * GAME_CONFIG.GRID_SIZE,
-            y: currentPos.y + direction.y * GAME_CONFIG.GRID_SIZE
+            y: currentPos.y + direction.y * GAME_CONFIG.GRID_SIZE,
           }
 
           if (!isPositionSafe(futureHead)) {
@@ -276,11 +311,13 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         if (currentSeeds.length > 0) {
           const nearestSeed = currentSeeds.reduce((nearest, seed) => {
             const distToSeed = Math.abs(seed.x - nextHead.x) + Math.abs(seed.y - nextHead.y)
-            const distToNearest = Math.abs(nearest.x - nextHead.x) + Math.abs(nearest.y - nextHead.y)
+            const distToNearest =
+              Math.abs(nearest.x - nextHead.x) + Math.abs(nearest.y - nextHead.y)
             return distToSeed < distToNearest ? seed : nearest
           })
 
-          const distanceToSeed = Math.abs(nearestSeed.x - nextHead.x) + Math.abs(nearestSeed.y - nextHead.y)
+          const distanceToSeed =
+            Math.abs(nearestSeed.x - nextHead.x) + Math.abs(nearestSeed.y - nextHead.y)
           // Only seek seeds if we have enough space
           if (availableSpace > 10) {
             score += Math.max(0, 100 - distanceToSeed * 0.5)
@@ -299,7 +336,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
 
     // Always choose the safest available move, even if it's not optimal for food
     for (const option of directionScores) {
-      if (option.score > -5000) { // Only avoid moves that are immediately lethal
+      if (option.score > -5000) {
+        // Only avoid moves that are immediately lethal
         return option.direction
       }
     }
@@ -314,13 +352,17 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     const head = player.snake[0]
 
     // Check wall collisions
-    if (head.x < 0 || head.x >= GAME_CONFIG.CANVAS_WIDTH ||
-        head.y < 0 || head.y >= GAME_CONFIG.CANVAS_HEIGHT) {
+    if (
+      head.x < 0 ||
+      head.x >= GAME_CONFIG.CANVAS_WIDTH ||
+      head.y < 0 ||
+      head.y >= GAME_CONFIG.CANVAS_HEIGHT
+    ) {
       return true
     }
 
     // Check obstacle collisions
-    if (currentObstacles.some(obstacle => obstacle.x === head.x && obstacle.y === head.y)) {
+    if (currentObstacles.some((obstacle) => obstacle.x === head.x && obstacle.y === head.y)) {
       return true
     }
 
@@ -333,7 +375,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
 
     // Check collision with other player
     if (otherPlayer && otherPlayer.alive && otherPlayer.snake) {
-      if (otherPlayer.snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+      if (otherPlayer.snake.some((segment) => segment.x === head.x && segment.y === head.y)) {
         return true
       }
     }
@@ -357,11 +399,17 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     // Update AI direction if player 2 is AI - apply immediately for this frame
     let updatedPlayer2 = currentPlayer2
     if (isAIMode && currentPlayer2.alive) {
-      const aiDirection = calculateAIDirection(currentPlayer2, currentPlayer1, currentSeeds, currentObstacles)
+      const aiDirection = calculateAIDirection(
+        currentPlayer2,
+        currentPlayer1,
+        currentSeeds,
+        currentObstacles
+      )
       updatedPlayer2 = { ...currentPlayer2, direction: aiDirection, nextDirection: aiDirection }
 
       // AI occasionally places obstacles strategically
-      if (canPlaceObstacle(currentPlayer2) && Math.random() < 0.1) { // Reduced to 10% chance
+      if (canPlaceObstacle(currentPlayer2) && Math.random() < 0.1) {
+        // Reduced to 10% chance
         const humanHead = currentPlayer1.snake[0]
         const aiTail = currentPlayer2.snake[currentPlayer2.snake.length - 1]
 
@@ -386,7 +434,9 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
       let newSnake1 = [head1, ...currentPlayer1.snake]
 
       // Check if player 1 ate a seed
-      const eatenSeedIndex1 = currentSeeds.findIndex(seed => seed.x === head1.x && seed.y === head1.y)
+      const eatenSeedIndex1 = currentSeeds.findIndex(
+        (seed) => seed.x === head1.x && seed.y === head1.y
+      )
 
       if (eatenSeedIndex1 !== -1) {
         seedsEatenThisTurn.push(eatenSeedIndex1)
@@ -403,7 +453,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         ...currentPlayer1,
         snake: newSnake1,
         direction: { ...currentPlayer1.nextDirection },
-        score: Math.max(0, newSnake1.length - 1)
+        score: Math.max(0, newSnake1.length - 1),
       }
     }
 
@@ -416,8 +466,9 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
       let newSnake2 = [head2, ...updatedPlayer2.snake]
 
       // Check if player 2 ate a seed (that player 1 didn't already eat)
-      const eatenSeedIndex2 = currentSeeds.findIndex((seed, index) =>
-        seed.x === head2.x && seed.y === head2.y && !seedsEatenThisTurn.includes(index)
+      const eatenSeedIndex2 = currentSeeds.findIndex(
+        (seed, index) =>
+          seed.x === head2.x && seed.y === head2.y && !seedsEatenThisTurn.includes(index)
       )
 
       if (eatenSeedIndex2 !== -1) {
@@ -435,22 +486,24 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         ...updatedPlayer2,
         snake: newSnake2,
         direction: { ...updatedPlayer2.nextDirection },
-        score: Math.max(0, newSnake2.length - 1)
+        score: Math.max(0, newSnake2.length - 1),
       }
     }
 
     // Remove eaten seeds
     if (seedsEatenThisTurn.length > 0) {
-      setSeeds(prevSeeds =>
-        prevSeeds.filter((_, index) => !seedsEatenThisTurn.includes(index))
-      )
+      setSeeds((prevSeeds) => prevSeeds.filter((_, index) => !seedsEatenThisTurn.includes(index)))
     }
 
     // Update players and check collisions
     if (newPlayer1) {
-      const collision1 = checkCollisionForPlayer(newPlayer1, newPlayer2 || currentPlayer2, currentObstacles)
+      const collision1 = checkCollisionForPlayer(
+        newPlayer1,
+        newPlayer2 || currentPlayer2,
+        currentObstacles
+      )
       if (collision1) {
-        setObstacles(prevObstacles => [...prevObstacles, ...newPlayer1.snake])
+        setObstacles((prevObstacles) => [...prevObstacles, ...newPlayer1.snake])
         setPlayer1({ ...newPlayer1, alive: false })
       } else {
         setPlayer1(newPlayer1)
@@ -458,9 +511,13 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     }
 
     if (newPlayer2) {
-      const collision2 = checkCollisionForPlayer(newPlayer2, newPlayer1 || currentPlayer1, currentObstacles)
+      const collision2 = checkCollisionForPlayer(
+        newPlayer2,
+        newPlayer1 || currentPlayer1,
+        currentObstacles
+      )
       if (collision2) {
-        setObstacles(prevObstacles => [...prevObstacles, ...newPlayer2.snake])
+        setObstacles((prevObstacles) => [...prevObstacles, ...newPlayer2.snake])
         setPlayer2({ ...newPlayer2, alive: false })
       } else {
         setPlayer2(newPlayer2)
@@ -468,58 +525,14 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     }
   }, [gameState, isAIMode])
 
-  const handleKeyPress = useCallback((e) => {
-    if (gameState !== 'playing') return
+  const handleKeyPress = useCallback(
+    (e) => {
+      if (gameState !== 'playing') return
 
-    // Player 1 controls (WASD + Space)
-    switch (e.key.toLowerCase()) {
-      case 'w':
-        setPlayer1(prev => {
-          // Prevent 180-degree turn
-          if (prev.direction.y !== 1) {
-            return { ...prev, nextDirection: { x: 0, y: -1 } }
-          }
-          return prev
-        })
-        break
-      case 's':
-        setPlayer1(prev => {
-          // Prevent 180-degree turn
-          if (prev.direction.y !== -1) {
-            return { ...prev, nextDirection: { x: 0, y: 1 } }
-          }
-          return prev
-        })
-        break
-      case 'a':
-        setPlayer1(prev => {
-          // Prevent 180-degree turn
-          if (prev.direction.x !== 1) {
-            return { ...prev, nextDirection: { x: -1, y: 0 } }
-          }
-          return prev
-        })
-        break
-      case 'd':
-        setPlayer1(prev => {
-          // Prevent 180-degree turn
-          if (prev.direction.x !== -1) {
-            return { ...prev, nextDirection: { x: 1, y: 0 } }
-          }
-          return prev
-        })
-        break
-      case ' ':
-        e.preventDefault()
-        placeObstacle(1)
-        break
-    }
-
-    // Player 2 controls (IJKL + Enter) - only if not AI mode
-    if (!isAIMode) {
+      // Player 1 controls (WASD + Space)
       switch (e.key.toLowerCase()) {
-        case 'i':
-          setPlayer2(prev => {
+        case 'w':
+          setPlayer1((prev) => {
             // Prevent 180-degree turn
             if (prev.direction.y !== 1) {
               return { ...prev, nextDirection: { x: 0, y: -1 } }
@@ -527,8 +540,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
             return prev
           })
           break
-        case 'k':
-          setPlayer2(prev => {
+        case 's':
+          setPlayer1((prev) => {
             // Prevent 180-degree turn
             if (prev.direction.y !== -1) {
               return { ...prev, nextDirection: { x: 0, y: 1 } }
@@ -536,8 +549,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
             return prev
           })
           break
-        case 'j':
-          setPlayer2(prev => {
+        case 'a':
+          setPlayer1((prev) => {
             // Prevent 180-degree turn
             if (prev.direction.x !== 1) {
               return { ...prev, nextDirection: { x: -1, y: 0 } }
@@ -545,8 +558,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
             return prev
           })
           break
-        case 'l':
-          setPlayer2(prev => {
+        case 'd':
+          setPlayer1((prev) => {
             // Prevent 180-degree turn
             if (prev.direction.x !== -1) {
               return { ...prev, nextDirection: { x: 1, y: 0 } }
@@ -554,13 +567,60 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
             return prev
           })
           break
-        case 'enter':
+        case ' ':
           e.preventDefault()
-          placeObstacle(2)
+          placeObstacle(1)
           break
       }
-    }
-  }, [gameState, player1, player2])
+
+      // Player 2 controls (IJKL + Enter) - only if not AI mode
+      if (!isAIMode) {
+        switch (e.key.toLowerCase()) {
+          case 'i':
+            setPlayer2((prev) => {
+              // Prevent 180-degree turn
+              if (prev.direction.y !== 1) {
+                return { ...prev, nextDirection: { x: 0, y: -1 } }
+              }
+              return prev
+            })
+            break
+          case 'k':
+            setPlayer2((prev) => {
+              // Prevent 180-degree turn
+              if (prev.direction.y !== -1) {
+                return { ...prev, nextDirection: { x: 0, y: 1 } }
+              }
+              return prev
+            })
+            break
+          case 'j':
+            setPlayer2((prev) => {
+              // Prevent 180-degree turn
+              if (prev.direction.x !== 1) {
+                return { ...prev, nextDirection: { x: -1, y: 0 } }
+              }
+              return prev
+            })
+            break
+          case 'l':
+            setPlayer2((prev) => {
+              // Prevent 180-degree turn
+              if (prev.direction.x !== -1) {
+                return { ...prev, nextDirection: { x: 1, y: 0 } }
+              }
+              return prev
+            })
+            break
+          case 'enter':
+            e.preventDefault()
+            placeObstacle(2)
+            break
+        }
+      }
+    },
+    [gameState, player1, player2]
+  )
 
   const renderGame = (currentPlayer1, currentPlayer2, currentObstacles, currentSeeds) => {
     if (!canvasRef.current) return
@@ -575,7 +635,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     // Draw seeds
     if (currentSeeds && currentSeeds.length > 0) {
       ctx.fillStyle = '#FFD700'
-      currentSeeds.forEach(seed => {
+      currentSeeds.forEach((seed) => {
         ctx.beginPath()
         ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
         ctx.fill()
@@ -590,7 +650,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
 
     // Draw obstacles
     if (currentObstacles && currentObstacles.length > 0) {
-      currentObstacles.forEach(obstacle => {
+      currentObstacles.forEach((obstacle) => {
         if (obstacle.type === 'dotted') {
           ctx.fillStyle = '#999'
           ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
@@ -611,14 +671,26 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     }
 
     // Draw snakes
-    [currentPlayer1, currentPlayer2].forEach(player => {
+    ;[currentPlayer1, currentPlayer2].forEach((player, playerIndex) => {
       if (!player || !player.alive || !player.snake) return
+
+      // In AI mode, highlight the human player (player1)
+      // In local mode (non-AI), don't highlight anyone
+      const isCurrentPlayer = isAIMode && playerIndex === 0
 
       player.snake.forEach((segment, index) => {
         if (index === 0) {
           // Draw head
           ctx.fillStyle = player.color
           ctx.fillRect(segment.x, segment.y, 20, 20)
+
+          // Add white outline for current player in AI mode
+          if (isCurrentPlayer) {
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 3
+            ctx.strokeRect(segment.x - 1, segment.y - 1, 22, 22)
+          }
+
           ctx.strokeStyle = '#fff'
           ctx.lineWidth = 2
           ctx.strokeRect(segment.x, segment.y, 20, 20)
@@ -626,6 +698,13 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           // Draw body
           ctx.fillStyle = lightenColor(player.color, 0.3)
           ctx.fillRect(segment.x + 1, segment.y + 1, 18, 18)
+
+          // Add white outline for current player's body in AI mode
+          if (isCurrentPlayer) {
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 2
+            ctx.strokeRect(segment.x, segment.y, 20, 20)
+          }
         }
       })
     })
@@ -635,7 +714,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   useEffect(() => {
     if (gameState === 'countdown') {
       const countdownInterval = setInterval(() => {
-        setCountdown(prev => {
+        setCountdown((prev) => {
           if (prev <= 1) {
             setGameState('playing')
             return 0
@@ -684,7 +763,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   // Check game over effect
   useEffect(() => {
     if (gameState === 'playing') {
-      const alivePlayers = [player1, player2].filter(p => p.alive)
+      const alivePlayers = [player1, player2].filter((p) => p.alive)
       if (alivePlayers.length <= 1) {
         setGameState('gameOver')
         const winner = alivePlayers.length > 0 ? alivePlayers[0] : null
@@ -692,12 +771,20 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           winner: winner ? { name: winner.name } : null,
           scores: [
             { name: player1.name, score: player1.score },
-            { name: player2.name, score: player2.score }
-          ].sort((a, b) => b.score - a.score)
+            { name: player2.name, score: player2.score },
+          ].sort((a, b) => b.score - a.score),
         })
       }
     }
-  }, [player1.alive, player2.alive, gameState, player1.name, player1.score, player2.name, player2.score])
+  }, [
+    player1.alive,
+    player2.alive,
+    gameState,
+    player1.name,
+    player1.score,
+    player2.name,
+    player2.score,
+  ])
 
   // Keep refs in sync
   useEffect(() => {
@@ -764,11 +851,17 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           <h1 style={{ fontSize: '4rem', margin: '50px 0' }}>{countdown}</h1>
           <p>Get ready! 🚀</p>
           <div style={{ marginTop: '40px', fontSize: '14px' }}>
-            <p><strong>Player 1:</strong> WASD + Space</p>
+            <p>
+              <strong>Player 1:</strong> WASD + Space
+            </p>
             {isAIMode ? (
-              <p><strong>AI:</strong> Computer Controlled</p>
+              <p>
+                <strong>AI:</strong> Computer Controlled
+              </p>
             ) : (
-              <p><strong>Player 2:</strong> IJKL + Enter</p>
+              <p>
+                <strong>Player 2:</strong> IJKL + Enter
+              </p>
             )}
           </div>
         </div>
@@ -814,11 +907,17 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
       <div className="game-ui">
         <div className="game-info" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <div>
-            <div><strong>Player 1 ({player1.name}):</strong> {player1.score} {player1.alive ? '🐍' : '💀'}</div>
+            <div>
+              <strong>Player 1 ({player1.name}):</strong> {player1.score}{' '}
+              {player1.alive ? '🐍' : '💀'}
+            </div>
             <div>Obstacle: {canPlaceObstacle(player1) ? '✅' : '⏳'}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div><strong>Player 2 ({player2.name}):</strong> {player2.score} {player2.alive ? '🐍' : '💀'}</div>
+            <div>
+              <strong>Player 2 ({player2.name}):</strong> {player2.score}{' '}
+              {player2.alive ? '🐍' : '💀'}
+            </div>
             <div>Obstacle: {canPlaceObstacle(player2) ? '✅' : '⏳'}</div>
           </div>
         </div>
@@ -828,13 +927,19 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         <div className="controls-info">
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div>
-              <p><strong>Player 1:</strong> WASD + Space</p>
+              <p>
+                <strong>Player 1:</strong> WASD + Space
+              </p>
             </div>
             <div>
               {isAIMode ? (
-                <p><strong>AI:</strong> Computer Controlled</p>
+                <p>
+                  <strong>AI:</strong> Computer Controlled
+                </p>
               ) : (
-                <p><strong>Player 2:</strong> IJKL + Enter</p>
+                <p>
+                  <strong>Player 2:</strong> IJKL + Enter
+                </p>
               )}
             </div>
           </div>

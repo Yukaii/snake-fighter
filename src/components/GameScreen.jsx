@@ -55,7 +55,7 @@ function GameScreen({ gameData, playerId }) {
         // Draw dotted obstacle
         ctx.fillStyle = '#999'
         ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
-        
+
         // Add dotted pattern
         ctx.fillStyle = '#333'
         for (let i = 0; i < 4; i++) {
@@ -76,11 +76,21 @@ function GameScreen({ gameData, playerId }) {
     gameData.players.forEach((player) => {
       if (!player.alive) return
 
+      const isCurrentPlayer = player.id === playerId
+
       player.snake.forEach((segment, index) => {
         if (index === 0) {
           // Draw head with border
           ctx.fillStyle = player.color
           ctx.fillRect(segment.x, segment.y, 20, 20)
+
+          // Add white outline for current player
+          if (isCurrentPlayer) {
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 3
+            ctx.strokeRect(segment.x - 1, segment.y - 1, 22, 22)
+          }
+
           ctx.strokeStyle = '#fff'
           ctx.lineWidth = 2
           ctx.strokeRect(segment.x, segment.y, 20, 20)
@@ -88,6 +98,13 @@ function GameScreen({ gameData, playerId }) {
           // Draw body
           ctx.fillStyle = lightenColor(player.color, 0.3)
           ctx.fillRect(segment.x + 1, segment.y + 1, 18, 18)
+
+          // Add white outline for current player's body
+          if (isCurrentPlayer) {
+            ctx.strokeStyle = '#fff'
+            ctx.lineWidth = 2
+            ctx.strokeRect(segment.x, segment.y, 20, 20)
+          }
         }
       })
     })
@@ -117,9 +134,7 @@ function GameScreen({ gameData, playerId }) {
           <div>Players Alive: {gameData.playersAlive}</div>
           <div>My Status: {myPlayer && myPlayer.alive ? '🐍 Alive' : '💀 Eliminated'}</div>
           {myPlayer && myPlayer.alive && (
-            <div>
-              Obstacle: {myPlayer.canPlaceObstacle ? '✅ Ready' : '⏳ Cooldown'}
-            </div>
+            <div>Obstacle: {myPlayer.canPlaceObstacle ? '✅ Ready' : '⏳ Cooldown'}</div>
           )}
         </div>
 

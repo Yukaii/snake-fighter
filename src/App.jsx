@@ -287,9 +287,7 @@ function App() {
         />
       )}
 
-      {gameState === GAME_STATES.LOCAL_GAME && (
-        <LocalGameScreen onReturnToMenu={returnToMenu} />
-      )}
+      {gameState === GAME_STATES.LOCAL_GAME && <LocalGameScreen onReturnToMenu={returnToMenu} />}
 
       {gameState === GAME_STATES.AI_GAME && (
         <LocalGameScreen onReturnToMenu={returnToMenu} isAIMode={true} />
