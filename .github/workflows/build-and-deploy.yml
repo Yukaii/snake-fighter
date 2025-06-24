@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-      - master
   pull_request:
     branches:
       - main
-      - master
   workflow_dispatch:
     inputs:
       pr_number:
@@ -100,7 +98,7 @@ jobs:
     if: |
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'review-app')) ||
       (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_review_app == 'true')
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -129,14 +127,14 @@ jobs:
           echo "📝 Commit: ${COMMIT_SHA}"
           echo "🏷️ Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${COMMIT_SHA}"
           echo "🔧 Trigger: ${TRIGGER_TYPE}"
-          
+
           # Create unique service name for this PR/branch
           SERVICE_NAME="snake-fighter-${BRANCH_NAME//[^a-zA-Z0-9]/-}"
           SERVICE_NAME="${SERVICE_NAME,,}" # Convert to lowercase
           SERVICE_NAME="${SERVICE_NAME:0:50}" # Limit length
-          
+
           echo "SERVICE_NAME=${SERVICE_NAME}" >> $GITHUB_ENV
-          
+
           # Deploy using Zeabur CLI (if available) or API
           if command -v zeabur &> /dev/null; then
             echo "📦 Deploying with Zeabur CLI..."
@@ -156,49 +154,49 @@ jobs:
             const commitSha = process.env.COMMIT_SHA;
             const serviceName = process.env.SERVICE_NAME;
             const shortCommit = commitSha ? commitSha.substring(0, 8) : 'unknown';
-            
+
             try {
               const { data: comments } = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
               });
-              
+
               // Check if we already have a review app comment
-              const botComment = comments.find(comment => 
-                comment.user.login === 'github-actions[bot]' && 
+              const botComment = comments.find(comment =>
+                comment.user.login === 'github-actions[bot]' &&
                 comment.body.includes('🐍 Snake Fighter Review App')
               );
-              
+
               const imageUrl = `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${commitSha}`;
-              
+
               const commentBody = `## 🐍 Snake Fighter Review App Deployed
-              
+
               Your multiplayer snake game is ready for testing!
-              
+
               **🎮 Game Features:**
               - Real-time multiplayer (up to 8 players)
               - WebSocket-powered gameplay
               - Room-based battles
               - Responsive React frontend
-              
+
               **🔧 Deployment Details:**
               **📦 Docker Image:** \`${imageUrl}\`
               **🏷️ Service:** \`${serviceName}\`
               **💻 Commit:** \`${shortCommit}\` ([view](https://github.com/${context.repo.owner}/${context.repo.repo}/commit/${commitSha}))
               **🏗️ Built with:** Node.js + React + Caddy
-              
+
               ### 🎯 How to Test:
               1. Open the review app URL
               2. Create a new game room or join an existing one
               3. Share the room code with other players
               4. Use arrow keys or WASD to control your snake
               5. Battle for the highest score!
-              
+
               ### 🧹 Cleanup:
               - Review app will be automatically cleaned up when this PR is closed
               - Each new commit will update the existing deployment
-              
+
               *Built and deployed automatically with GitHub Actions + Zeabur*`;
 
               if (botComment) {
@@ -237,7 +235,7 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     permissions:
       security-events: write
-    
+
     steps:
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
