@@ -73,7 +73,9 @@ spec:
             - |
               cd /app
               # Start Node.js server in background
-              bun server.js &
+              node server.js &
+              # Wait for Node.js server to be ready
+              sleep 2
               # Start Caddy reverse proxy
               caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
         ports:
