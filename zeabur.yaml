@@ -72,10 +72,8 @@ spec:
             - -c
             - |
               cd /app
-              # Build the React frontend
-              npm run build
               # Start Node.js server in background
-              node server.js &
+              bun server.js &
               # Start Caddy reverse proxy
               caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
         ports:
