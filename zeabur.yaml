@@ -107,7 +107,7 @@ spec:
                   }
 
                   # Serve static files directly with compression
-                  handle_path /assets/* {
+                  handle /assets/* {
                       root * /app/dist
                       file_server {
                           precompressed gzip br

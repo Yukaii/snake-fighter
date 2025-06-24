@@ -34,8 +34,9 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/server.js ./
 COPY --from=build /app/package.json ./
 
-# Create Caddy configuration directory
+# Create Caddy configuration directory and copy Caddyfile
 RUN mkdir -p /etc/caddy
+COPY Caddyfile /etc/caddy/Caddyfile
 
 # Expose port 80 (Caddy will handle the proxy)
 EXPOSE 80
