@@ -80,9 +80,6 @@ spec:
           - id: web
             port: 80
             type: HTTP
-        volumes:
-          - id: static
-            dir: /app/dist
         env:
           NODE_ENV:
             default: "production"
