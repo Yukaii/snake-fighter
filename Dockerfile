@@ -8,7 +8,7 @@ RUN apk add --no-cache caddy nodejs
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 # Install production dependencies
 RUN bun install --frozen-lockfile --production
