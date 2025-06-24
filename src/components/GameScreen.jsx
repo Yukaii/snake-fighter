@@ -50,9 +50,26 @@ function GameScreen({ gameData, playerId }) {
     }
 
     // Draw obstacles
-    ctx.fillStyle = '#666'
     gameData.obstacles.forEach((obstacle) => {
-      ctx.fillRect(obstacle.x, obstacle.y, 20, 20)
+      if (obstacle.type === 'dotted') {
+        // Draw dotted obstacle
+        ctx.fillStyle = '#999'
+        ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
+        
+        // Add dotted pattern
+        ctx.fillStyle = '#333'
+        for (let i = 0; i < 4; i++) {
+          for (let j = 0; j < 4; j++) {
+            if ((i + j) % 2 === 0) {
+              ctx.fillRect(obstacle.x + 2 + i * 4, obstacle.y + 2 + j * 4, 2, 2)
+            }
+          }
+        }
+      } else {
+        // Draw solid obstacle (from seeds or dead snakes)
+        ctx.fillStyle = '#666'
+        ctx.fillRect(obstacle.x, obstacle.y, 20, 20)
+      }
     })
 
     // Draw snakes
@@ -99,6 +116,11 @@ function GameScreen({ gameData, playerId }) {
           <div>Score: {myPlayer ? myPlayer.score : 0}</div>
           <div>Players Alive: {gameData.playersAlive}</div>
           <div>My Status: {myPlayer && myPlayer.alive ? '🐍 Alive' : '💀 Eliminated'}</div>
+          {myPlayer && myPlayer.alive && (
+            <div>
+              Obstacle: {myPlayer.canPlaceObstacle ? '✅ Ready' : '⏳ Cooldown'}
+            </div>
+          )}
         </div>
 
         <canvas ref={canvasRef} className="game-canvas" width={800} height={600} />
@@ -106,6 +128,7 @@ function GameScreen({ gameData, playerId }) {
         <div className="controls-info">
           <p>Use WASD or Arrow Keys to move your snake</p>
           <p>🟡 Eat seeds to grow and create obstacles!</p>
+          <p>Press SPACE to sacrifice tail and place dotted obstacle (15s cooldown)</p>
           <p>Avoid walls, obstacles, and other snakes!</p>
         </div>
       </div>

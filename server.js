@@ -65,6 +65,7 @@ const GAME_CONFIG = {
   COUNTDOWN_TIME: 3,
   MAX_SEEDS: 8,
   SEED_SPAWN_INTERVAL: 2000,
+  OBSTACLE_PLACEMENT_COOLDOWN: 15000,
 }
 
 class GameRoom {
@@ -99,6 +100,7 @@ class GameRoom {
       score: 0,
       direction: { x: 1, y: 0 },
       nextDirection: { x: 1, y: 0 },
+      lastObstaclePlacement: 0,
     })
   }
 
@@ -153,6 +155,7 @@ class GameRoom {
       player.snake = this.createSnake()
       player.direction = { x: 1, y: 0 }
       player.nextDirection = { x: 1, y: 0 }
+      player.lastObstaclePlacement = 0
     })
 
     this.obstacles = []
@@ -331,6 +334,7 @@ class GameRoom {
         snake: p.snake,
         alive: p.alive,
         score: p.score,
+        canPlaceObstacle: this.canPlayerPlaceObstacle(p.id),
       })),
       obstacles: this.obstacles,
       seeds: this.seeds,
@@ -397,6 +401,46 @@ class GameRoom {
     }
 
     return true
+  }
+
+  canPlayerPlaceObstacle(playerId) {
+    const player = this.players.get(playerId)
+    if (!player || !player.alive || player.snake.length <= 1) {
+      return false
+    }
+
+    const now = Date.now()
+    return (now - player.lastObstaclePlacement) >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
+  }
+
+  placePlayerObstacle(playerId) {
+    const player = this.players.get(playerId)
+    if (!player || !this.canPlayerPlaceObstacle(playerId)) {
+      return false
+    }
+
+    // Remove tail segment and convert to dotted obstacle
+    const tail = player.snake.pop()
+    if (tail) {
+      this.obstacles.push({ 
+        x: tail.x, 
+        y: tail.y, 
+        type: 'dotted',
+        placedBy: playerId 
+      })
+
+      player.lastObstaclePlacement = Date.now()
+      player.score = Math.max(0, player.snake.length - 1)
+
+      io.to(this.id).emit('obstacle-placed', {
+        playerId: playerId,
+        obstacle: { x: tail.x, y: tail.y, type: 'dotted' }
+      })
+
+      return true
+    }
+
+    return false
   }
 
   getRoomData() {
@@ -474,6 +518,13 @@ io.on('connection', (socket) => {
     const room = Array.from(rooms.values()).find((r) => r.players.has(socket.id))
     if (room) {
       room.updatePlayerDirection(socket.id, direction)
+    }
+  })
+
+  socket.on('place-obstacle', () => {
+    const room = Array.from(rooms.values()).find((r) => r.players.has(socket.id))
+    if (room && room.gameState === 'playing') {
+      room.placePlayerObstacle(socket.id)
     }
   })
 

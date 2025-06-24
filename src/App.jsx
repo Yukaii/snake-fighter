@@ -54,6 +54,11 @@ function App() {
         case 'arrowright':
           direction = { x: 1, y: 0 }
           break
+        case ' ':
+        case 'space':
+          e.preventDefault()
+          socket.emit('place-obstacle')
+          return
       }
 
       if (direction) {
