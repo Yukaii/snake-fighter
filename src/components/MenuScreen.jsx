@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-function MenuScreen({ onCreateRoom, onJoinRoom, isConnected }) {
+function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected }) {
   const [playerName, setPlayerName] = useState('')
   const [roomId, setRoomId] = useState('')
 
@@ -87,10 +87,30 @@ function MenuScreen({ onCreateRoom, onJoinRoom, isConnected }) {
         </button>
       </div>
 
+      <div className="form-group" style={{ marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}>
+        <button
+          type="button"
+          className="btn btn-local"
+          onClick={onStartLocalGame}
+          style={{
+            backgroundColor: '#9C27B0',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          🎮 Local 2-Player Mode
+        </button>
+      </div>
+
       <div style={{ marginTop: '40px', fontSize: '14px', opacity: '0.8' }}>
+        <p>🌐 Online Multiplayer:</p>
         <p>🎮 Create a room to host a game</p>
         <p>🏠 Join an existing room with the Room ID</p>
         <p>👥 Need at least 2 players to start</p>
+        <br />
+        <p>💻 Local Multiplayer:</p>
+        <p>🎮 Two players on same computer</p>
+        <p>⌨️ Player 1: WASD + Space | Player 2: IJKL + Enter</p>
       </div>
     </div>
   )

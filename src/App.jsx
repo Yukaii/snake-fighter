@@ -4,6 +4,7 @@ import GameOverScreen from './components/GameOverScreen'
 import GameScreen from './components/GameScreen'
 import LobbyScreen from './components/LobbyScreen'
 import MenuScreen from './components/MenuScreen'
+import LocalGameScreen from './components/LocalGameScreen'
 import { useSocket } from './hooks/useSocket'
 
 const GAME_STATES = {
@@ -12,6 +13,7 @@ const GAME_STATES = {
   COUNTDOWN: 'countdown',
   PLAYING: 'playing',
   GAME_OVER: 'gameOver',
+  LOCAL_GAME: 'localGame',
 }
 
 function App() {
@@ -219,6 +221,17 @@ function App() {
     setGameOverData(null)
   }
 
+  const startLocalGame = () => {
+    setGameState(GAME_STATES.LOCAL_GAME)
+  }
+
+  const returnToMenu = () => {
+    setGameState(GAME_STATES.MENU)
+    setCurrentRoom(null)
+    setGameData(null)
+    setGameOverData(null)
+  }
+
   return (
     <div className="game-container">
       {error && (
@@ -239,7 +252,12 @@ function App() {
       )}
 
       {gameState === GAME_STATES.MENU && (
-        <MenuScreen onCreateRoom={createRoom} onJoinRoom={joinRoom} isConnected={isConnected} />
+        <MenuScreen 
+          onCreateRoom={createRoom} 
+          onJoinRoom={joinRoom} 
+          onStartLocalGame={startLocalGame}
+          isConnected={isConnected} 
+        />
       )}
 
       {gameState === GAME_STATES.LOBBY && currentRoom && (
@@ -261,6 +279,10 @@ function App() {
           playerId={playerId}
           onPlayAgain={returnToLobby}
         />
+      )}
+
+      {gameState === GAME_STATES.LOCAL_GAME && (
+        <LocalGameScreen onReturnToMenu={returnToMenu} />
       )}
     </div>
   )
