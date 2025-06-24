@@ -1,0 +1,18 @@
+# Docker ignore file for Snake Fighter
+node_modules
+npm-debug.log
+.nyc_output
+.env
+coverage
+.git
+.gitignore
+README.md
+.eslintrc.js
+.prettierrc
+.prettierignore
+Dockerfile*
+docker-compose*
+.dockerignore
+.claude
+.biomeignore
+biome.json

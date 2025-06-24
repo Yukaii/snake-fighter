@@ -1,0 +1,148 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: Snake Fighter
+spec:
+  description: Multiplayer Snake Game with WebSockets and React frontend
+  icon: https://raw.githubusercontent.com/twemoji/twemoji/master/assets/svg/1f40d.svg
+  tags:
+    - Game
+    - WebSocket
+    - React
+    - Multiplayer
+    - Node.js
+  readme: |-
+    # Snake Fighter
+
+    A real-time multiplayer Snake game built with React frontend and Node.js WebSocket backend.
+
+    ## Features
+
+    - **Real-time Multiplayer** - Up to 8 players per room
+    - **WebSocket Communication** - Low-latency game updates using Socket.IO
+    - **Room System** - Create and join game rooms with unique codes
+    - **React Frontend** - Modern, responsive user interface
+    - **Single Service Architecture** - Caddy handles both static assets and WebSocket proxying
+
+    ## Architecture
+
+    The deployment uses an optimized single-service architecture:
+    - **Node.js Backend** serves WebSocket connections and game logic
+    - **React Frontend** built with Vite for optimal performance
+    - **Caddy Reverse Proxy** handles static file serving with compression and WebSocket proxying
+    - **Single Container** deployment for simplicity and efficiency
+
+    ## Game Features
+
+    - Real-time multiplayer snake battles
+    - Collision detection with walls, self, and other players
+    - Dynamic obstacle generation from eliminated players
+    - Room-based gameplay with host controls
+    - Countdown system and score tracking
+    - Responsive controls and smooth animations
+
+    ## Usage
+
+    The game will be available at your assigned domain. Players can:
+    - Create new game rooms or join existing ones with room codes
+    - Battle up to 7 other players in real-time
+    - Use arrow keys or WASD to control their snake
+    - Compete for the highest score and longest survival time
+
+    Static assets are served efficiently by Caddy with compression and caching.
+
+  variables:
+    - key: GAME_DOMAIN
+      type: DOMAIN
+      name: Game Domain
+      description: Domain for the Snake Fighter game
+
+  services:
+    - name: Snake Fighter Game
+      icon: https://raw.githubusercontent.com/twemoji/twemoji/master/assets/svg/1f40d.svg
+      template: PREBUILT_V2
+      domainKey: GAME_DOMAIN
+      spec:
+        source:
+          image: ghcr.io/snake-fighter/snake-fighter:latest
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              cd /app
+              # Build the React frontend
+              npm run build
+              # Start Node.js server in background
+              node server.js &
+              # Start Caddy reverse proxy
+              caddy run --config /etc/caddy/Caddyfile --adapter caddyfile
+        ports:
+          - id: web
+            port: 80
+            type: HTTP
+        volumes:
+          - id: static
+            dir: /app/dist
+        env:
+          NODE_ENV:
+            default: "production"
+            expose: false
+          PORT:
+            default: "3000"
+            expose: false
+          GAME_DOMAIN:
+            default: https://${GAME_DOMAIN}
+            expose: false
+        configs:
+          - path: /etc/caddy/Caddyfile
+            template: |
+              :80 {
+                  # Handle WebSocket connections for Socket.IO
+                  handle /socket.io/* {
+                      reverse_proxy localhost:3000 {
+                          header_up Host {host}
+                          header_up X-Real-IP {remote_host}
+                          header_up X-Forwarded-For {remote_host}
+                          header_up X-Forwarded-Proto {scheme}
+                          header_up Connection {>Connection}
+                          header_up Upgrade {>Upgrade}
+                      }
+                  }
+                  
+                  # Serve static files directly with compression
+                  handle_path /assets/* {
+                      root * /app/dist
+                      file_server {
+                          precompressed gzip br
+                      }
+                      header Cache-Control "public, max-age=31536000, immutable"
+                  }
+                  
+                  # Serve other static files (favicon, etc.)
+                  handle_path /static/* {
+                      root * /app/dist
+                      file_server {
+                          precompressed gzip br
+                      }
+                      header Cache-Control "public, max-age=86400"
+                  }
+                  
+                  # Handle SPA routing - serve index.html for all other requests
+                  handle {
+                      try_files {path} /index.html
+                      root * /app/dist
+                      file_server
+                      header Cache-Control "public, max-age=0, must-revalidate"
+                  }
+              }
+            permission: null
+            envsubst: false
+        portForwarding:
+          enabled: false
+        healthCheck:
+          type: HTTP
+          port: web
+          http:
+            path: /

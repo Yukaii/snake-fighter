@@ -33,7 +33,13 @@
     "vite": "^4.4.5",
     "@biomejs/biome": "^1.8.3"
   },
-  "keywords": ["snake", "multiplayer", "websocket", "game", "react"],
+  "keywords": [
+    "snake",
+    "multiplayer",
+    "websocket",
+    "game",
+    "react"
+  ],
   "author": "Snake Fighter Team",
   "license": "MIT"
 }
