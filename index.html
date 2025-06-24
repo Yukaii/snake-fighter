@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Fighter - Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="menu" class="screen">
+            <h1>Snake Fighter</h1>
+            <div id="roomControls">
+                <input type="text" id="roomId" placeholder="Enter Room ID">
+                <button id="joinRoom">Join Room</button>
+                <button id="createRoom">Create Room</button>
+            </div>
+            <div id="playerInfo">
+                <input type="text" id="playerName" placeholder="Your Name" maxlength="20">
+            </div>
+        </div>
+        
+        <div id="lobby" class="screen hidden">
+            <h2>Room: <span id="currentRoom"></span></h2>
+            <div id="playerList">
+                <h3>Players:</h3>
+                <ul id="players"></ul>
+            </div>
+            <div id="hostControls" class="hidden">
+                <button id="startGame">Start Game</button>
+            </div>
+            <button id="leaveRoom">Leave Room</button>
+        </div>
+        
+        <div id="countdown" class="screen hidden">
+            <h2>Game Starting In</h2>
+            <div id="countdownTimer">3</div>
+        </div>
+        
+        <div id="game" class="screen hidden">
+            <div id="gameInfo">
+                <div id="score">Score: 0</div>
+                <div id="playersAlive">Players Alive: 0</div>
+            </div>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div id="controls">
+                <p>Use WASD or Arrow Keys to move</p>
+            </div>
+        </div>
+        
+        <div id="gameOver" class="screen hidden">
+            <h2>Game Over!</h2>
+            <div id="finalScore">Your Score: 0</div>
+            <div id="winner">Winner: None</div>
+            <button id="playAgain">Play Again</button>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>

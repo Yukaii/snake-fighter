@@ -1,0 +1,196 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+#gameContainer {
+    text-align: center;
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px;
+}
+
+.screen {
+    display: block;
+}
+
+.screen.hidden {
+    display: none;
+}
+
+h1 {
+    font-size: 3em;
+    margin-bottom: 30px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+h2 {
+    font-size: 2em;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+
+#roomControls, #playerInfo {
+    margin: 20px 0;
+}
+
+input {
+    padding: 10px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    min-width: 200px;
+}
+
+button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    background: #4CAF50;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #45a049;
+}
+
+button:disabled {
+    background: #666;
+    cursor: not-allowed;
+}
+
+#lobby {
+    background: rgba(255,255,255,0.1);
+    padding: 30px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+#playerList {
+    margin: 20px 0;
+}
+
+#players {
+    list-style: none;
+    padding: 0;
+}
+
+#players li {
+    padding: 10px;
+    margin: 5px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 5px;
+    display: inline-block;
+    margin-right: 10px;
+}
+
+#countdown {
+    background: rgba(0,0,0,0.8);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#countdownTimer {
+    font-size: 6em;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+#game {
+    padding: 20px;
+}
+
+#gameInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+#gameCanvas {
+    border: 3px solid #fff;
+    border-radius: 10px;
+    background: #000;
+    display: block;
+    margin: 0 auto;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#controls {
+    margin-top: 20px;
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+#gameOver {
+    background: rgba(255,255,255,0.1);
+    padding: 40px;
+    border-radius: 10px;
+    backdrop-filter: blur(10px);
+}
+
+#finalScore, #winner {
+    font-size: 1.5em;
+    margin: 20px 0;
+}
+
+#winner {
+    color: #FFD700;
+    font-weight: bold;
+}
+
+@media (max-width: 768px) {
+    #gameCanvas {
+        width: 100%;
+        height: auto;
+    }
+    
+    h1 {
+        font-size: 2em;
+    }
+    
+    input, button {
+        width: 100%;
+        margin: 10px 0;
+    }
+    
+    #gameInfo {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
