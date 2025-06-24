@@ -1,8 +1,8 @@
 # Multi-stage build for Snake Fighter
 FROM oven/bun:1-alpine AS base
 
-# Install Caddy and Node.js (needed for server.js runtime)
-RUN apk add --no-cache caddy nodejs
+# Install Caddy, Node.js, and debugging tools
+RUN apk add --no-cache caddy nodejs curl wget netcat-openbsd htop procps
 
 # Set work directory
 WORKDIR /app
