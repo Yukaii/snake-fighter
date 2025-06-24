@@ -1,29 +1,28 @@
 # Multi-stage build for Snake Fighter
-FROM node:18-alpine AS base
+FROM oven/bun:1-alpine AS base
 
-# Install Caddy
-RUN apk add --no-cache caddy
+# Install Caddy and Node.js (needed for server.js runtime)
+RUN apk add --no-cache caddy nodejs
 
 # Set work directory
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY bun.lock* ./
+COPY package.json bun.lockb ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install production dependencies
+RUN bun install --frozen-lockfile --production
 
 FROM base AS build
 
 # Install all dependencies for building
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the React frontend
-RUN npm run build
+RUN bun run build
 
 FROM base AS production
 
