@@ -14,6 +14,7 @@ const GAME_STATES = {
   PLAYING: 'playing',
   GAME_OVER: 'gameOver',
   LOCAL_GAME: 'localGame',
+  AI_GAME: 'aiGame',
 }
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
   const [gameOverData, setGameOverData] = useState(null)
   const [error, setError] = useState('')
 
-  const { socket, isConnected } = useSocket('https://tunnel.yukai.dev/')
+  const { socket, isConnected } = useSocket()
 
   const handleError = useCallback((message) => {
     console.error('Game error:', message)
@@ -225,6 +226,10 @@ function App() {
     setGameState(GAME_STATES.LOCAL_GAME)
   }
 
+  const startAIGame = () => {
+    setGameState(GAME_STATES.AI_GAME)
+  }
+
   const returnToMenu = () => {
     setGameState(GAME_STATES.MENU)
     setCurrentRoom(null)
@@ -252,11 +257,12 @@ function App() {
       )}
 
       {gameState === GAME_STATES.MENU && (
-        <MenuScreen 
-          onCreateRoom={createRoom} 
-          onJoinRoom={joinRoom} 
+        <MenuScreen
+          onCreateRoom={createRoom}
+          onJoinRoom={joinRoom}
           onStartLocalGame={startLocalGame}
-          isConnected={isConnected} 
+          onStartAIGame={startAIGame}
+          isConnected={isConnected}
         />
       )}
 
@@ -283,6 +289,10 @@ function App() {
 
       {gameState === GAME_STATES.LOCAL_GAME && (
         <LocalGameScreen onReturnToMenu={returnToMenu} />
+      )}
+
+      {gameState === GAME_STATES.AI_GAME && (
+        <LocalGameScreen onReturnToMenu={returnToMenu} isAIMode={true} />
       )}
     </div>
   )

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected }) {
+function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame, isConnected }) {
   const [playerName, setPlayerName] = useState('')
   const [roomId, setRoomId] = useState('')
 
@@ -95,10 +95,24 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
           style={{
             backgroundColor: '#9C27B0',
             color: 'white',
-            width: '100%'
+            width: '100%',
+            marginBottom: '10px'
           }}
         >
           🎮 Local 2-Player Mode
+        </button>
+        
+        <button
+          type="button"
+          className="btn btn-ai"
+          onClick={onStartAIGame}
+          style={{
+            backgroundColor: '#FF9800',
+            color: 'white',
+            width: '100%'
+          }}
+        >
+          🤖 vs AI Mode
         </button>
       </div>
 
@@ -108,9 +122,9 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
         <p>🏠 Join an existing room with the Room ID</p>
         <p>👥 Need at least 2 players to start</p>
         <br />
-        <p>💻 Local Multiplayer:</p>
-        <p>🎮 Two players on same computer</p>
-        <p>⌨️ Player 1: WASD + Space | Player 2: IJKL + Enter</p>
+        <p>💻 Local Modes:</p>
+        <p>🎮 Two players: WASD + Space | IJKL + Enter</p>
+        <p>🤖 vs AI: WASD + Space vs Computer</p>
       </div>
     </div>
   )
