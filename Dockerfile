@@ -24,6 +24,9 @@ COPY . .
 # Build the React frontend
 RUN bun run build
 
+# Debug: List built assets
+RUN ls -la dist/assets/
+
 FROM base AS production
 
 # Copy built application
