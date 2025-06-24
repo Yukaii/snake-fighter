@@ -65,7 +65,7 @@ spec:
       domainKey: GAME_DOMAIN
       spec:
         source:
-          image: ghcr.io/snake-fighter/snake-fighter:latest
+          image: ghcr.io/yukaii/snake-fighter/snake-fighter:latest
           command:
             - /bin/sh
           args:
