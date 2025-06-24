@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 
-export const useSocket = (serverUrl = 'http://localhost:3001') => {
+export const useSocket = (serverUrl = import.meta.env.VITE_SERVER_URL || '/') => {
   const socketRef = useRef(null)
   const [isConnected, setIsConnected] = useState(false)
 
