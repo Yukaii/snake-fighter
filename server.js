@@ -63,6 +63,8 @@ const GAME_CONFIG = {
   MAX_SNAKE_LENGTH: 15,
   GAME_SPEED: 150,
   COUNTDOWN_TIME: 3,
+  MAX_SEEDS: 8,
+  SEED_SPAWN_INTERVAL: 2000,
 }
 
 class GameRoom {
@@ -72,8 +74,10 @@ class GameRoom {
     this.players = new Map()
     this.gameState = 'waiting' // waiting, countdown, playing, finished
     this.obstacles = []
+    this.seeds = []
     this.countdownTimer = null
     this.gameLoop = null
+    this.seedSpawnTimer = null
     this.startTime = null
   }
 
@@ -152,9 +156,12 @@ class GameRoom {
     })
 
     this.obstacles = []
+    this.seeds = []
+    this.spawnInitialSeeds()
 
     io.to(this.id).emit('game-start')
     this.startGameLoop()
+    this.startSeedSpawning()
   }
 
   startGameLoop() {
@@ -188,8 +195,23 @@ class GameRoom {
 
     player.snake.unshift(head)
 
-    if (player.snake.length > GAME_CONFIG.MAX_SNAKE_LENGTH) {
-      player.snake.pop()
+    // Check if snake ate a seed
+    const eatenSeedIndex = this.seeds.findIndex((seed) => seed.x === head.x && seed.y === head.y)
+
+    if (eatenSeedIndex !== -1) {
+      // Remove the eaten seed
+      const eatenSeed = this.seeds.splice(eatenSeedIndex, 1)[0]
+
+      // Convert eaten seed to obstacle
+      this.obstacles.push({ ...eatenSeed })
+
+      // Snake grows by not removing tail
+      player.score++
+    } else {
+      // Normal movement - remove tail if at max length
+      if (player.snake.length > GAME_CONFIG.MAX_SNAKE_LENGTH) {
+        player.snake.pop()
+      }
     }
 
     player.score = Math.max(0, player.snake.length - 1)
@@ -258,6 +280,10 @@ class GameRoom {
       clearInterval(this.gameLoop)
       this.gameLoop = null
     }
+    if (this.seedSpawnTimer) {
+      clearInterval(this.seedSpawnTimer)
+      this.seedSpawnTimer = null
+    }
 
     const alivePlayers = Array.from(this.players.values()).filter((p) => p.alive)
     const winner = alivePlayers.length > 0 ? alivePlayers[0] : null
@@ -307,10 +333,70 @@ class GameRoom {
         score: p.score,
       })),
       obstacles: this.obstacles,
+      seeds: this.seeds,
       playersAlive: Array.from(this.players.values()).filter((p) => p.alive).length,
     }
 
     io.to(this.id).emit('game-update', gameData)
+  }
+
+  spawnInitialSeeds() {
+    const initialSeedCount = Math.min(3, GAME_CONFIG.MAX_SEEDS)
+    for (let i = 0; i < initialSeedCount; i++) {
+      this.spawnSeed()
+    }
+  }
+
+  startSeedSpawning() {
+    this.seedSpawnTimer = setInterval(() => {
+      if (this.seeds.length < GAME_CONFIG.MAX_SEEDS) {
+        this.spawnSeed()
+      }
+    }, GAME_CONFIG.SEED_SPAWN_INTERVAL)
+  }
+
+  spawnSeed() {
+    if (this.seeds.length >= GAME_CONFIG.MAX_SEEDS) return
+
+    let attempts = 0
+    const maxAttempts = 100
+
+    while (attempts < maxAttempts) {
+      const x =
+        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.GRID_SIZE)) *
+        GAME_CONFIG.GRID_SIZE
+      const y =
+        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.GRID_SIZE)) *
+        GAME_CONFIG.GRID_SIZE
+
+      // Check if position is free
+      if (this.isPositionFree(x, y)) {
+        this.seeds.push({ x, y })
+        break
+      }
+      attempts++
+    }
+  }
+
+  isPositionFree(x, y) {
+    // Check against obstacles
+    if (this.obstacles.some((obstacle) => obstacle.x === x && obstacle.y === y)) {
+      return false
+    }
+
+    // Check against existing seeds
+    if (this.seeds.some((seed) => seed.x === x && seed.y === y)) {
+      return false
+    }
+
+    // Check against all snake segments
+    for (const player of this.players.values()) {
+      if (player.alive && player.snake.some((segment) => segment.x === x && segment.y === y)) {
+        return false
+      }
+    }
+
+    return true
   }
 
   getRoomData() {

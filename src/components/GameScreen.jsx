@@ -32,6 +32,23 @@ function GameScreen({ gameData, playerId }) {
     ctx.fillStyle = '#000'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
+    // Draw seeds/food
+    if (gameData.seeds) {
+      ctx.fillStyle = '#FFD700' // Gold color for seeds
+      gameData.seeds.forEach((seed) => {
+        ctx.beginPath()
+        ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
+        ctx.fill()
+
+        // Add a small highlight
+        ctx.fillStyle = '#FFF'
+        ctx.beginPath()
+        ctx.arc(seed.x + 8, seed.y + 8, 3, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.fillStyle = '#FFD700'
+      })
+    }
+
     // Draw obstacles
     ctx.fillStyle = '#666'
     gameData.obstacles.forEach((obstacle) => {
@@ -88,6 +105,7 @@ function GameScreen({ gameData, playerId }) {
 
         <div className="controls-info">
           <p>Use WASD or Arrow Keys to move your snake</p>
+          <p>🟡 Eat seeds to grow and create obstacles!</p>
           <p>Avoid walls, obstacles, and other snakes!</p>
         </div>
       </div>
