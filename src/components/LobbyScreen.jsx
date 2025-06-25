@@ -1,4 +1,7 @@
 import React from 'react'
+import TUIButton from './ui/TUIButton'
+import TUIContainer from './ui/TUIContainer'
+import TUIText from './ui/TUIText'
 
 function LobbyScreen({ room, playerId, onStartGame, onLeaveRoom }) {
   const isHost = room.hostId === playerId
@@ -23,13 +26,13 @@ function LobbyScreen({ room, playerId, onStartGame, onLeaveRoom }) {
 
   return (
     <div className="screen">
-      <div className="lobby-container">
-        <h2>Game Lobby</h2>
+      <TUIContainer title="Game Lobby" className="lobby-container">
+        <TUIText variant="h2">Game Lobby</TUIText>
 
         <div className="room-id-display">Room ID: {room.id}</div>
 
         <div style={{ margin: '30px 0' }}>
-          <h3>Players ({room.players.length}/8)</h3>
+          <TUIText variant="h2">Players ({room.players.length}/8)</TUIText>
           <div className="players-grid">
             {room.players.map((player) => (
               <div
@@ -49,29 +52,31 @@ function LobbyScreen({ room, playerId, onStartGame, onLeaveRoom }) {
 
         <div className="form-group">
           {isHost && (
-            <button type="button" className="btn" onClick={onStartGame} disabled={!canStartGame}>
+            <TUIButton variant="primary" onClick={onStartGame} disabled={!canStartGame}>
               {room.players.length < 2 ? 'Need 2+ Players' : 'Start Game'}
-            </button>
+            </TUIButton>
           )}
 
           {!isHost && (
-            <p style={{ fontSize: '18px', margin: '20px 0' }}>
+            <TUIText style={{ fontSize: '18px', margin: '20px 0' }}>
               Waiting for host to start the game...
-            </p>
+            </TUIText>
           )}
         </div>
 
-        <button type="button" className="btn btn-danger" onClick={onLeaveRoom}>
+        <TUIButton variant="danger" onClick={onLeaveRoom}>
           Leave Room
-        </button>
+        </TUIButton>
 
-        <div style={{ marginTop: '30px', fontSize: '14px', opacity: '0.8' }}>
-          <p>🎮 Controls: WASD or Arrow Keys</p>
-          <p>🐍 Snake growth is limited to 15 segments</p>
-          <p>💀 Dead snakes become obstacles</p>
-          <p>🏆 Last player standing wins!</p>
-        </div>
-      </div>
+        <TUIContainer style={{ marginTop: '30px' }}>
+          <TUIText variant="small">
+            🎮 Controls: WASD or Arrow Keys
+            <br />🐍 Snake growth is limited to 15 segments
+            <br />💀 Dead snakes become obstacles
+            <br />🏆 Last player standing wins!
+          </TUIText>
+        </TUIContainer>
+      </TUIContainer>
     </div>
   )
 }

@@ -1,4 +1,8 @@
 import React, { useState } from 'react'
+import TUIButton from './ui/TUIButton'
+import TUIContainer from './ui/TUIContainer'
+import TUIInput from './ui/TUIInput'
+import TUIText from './ui/TUIText'
 
 function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame, isConnected }) {
   const [playerName, setPlayerName] = useState('')
@@ -28,24 +32,21 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
 
   return (
     <div className="screen">
-      <h1>🐍 Snake Fighter</h1>
+      <TUIText variant="h1">🐍 Snake Fighter</TUIText>
 
-      <div
+      <TUIContainer
         style={{
           marginBottom: '20px',
           padding: '10px',
-          borderRadius: '8px',
           backgroundColor: isConnected ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
           color: isConnected ? '#4CAF50' : '#f44336',
         }}
       >
         {isConnected ? '🟢 Connected to server' : '🔴 Connecting to server...'}
-      </div>
+      </TUIContainer>
 
       <div className="form-group">
-        <input
-          type="text"
-          className="input-field"
+        <TUIInput
           placeholder="Enter your name"
           value={playerName}
           onChange={(e) => setPlayerName(e.target.value)}
@@ -56,9 +57,7 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
       </div>
 
       <div className="form-group">
-        <input
-          type="text"
-          className="input-field"
+        <TUIInput
           placeholder="Enter Room ID (optional)"
           value={roomId}
           onChange={(e) => setRoomId(e.target.value)}
@@ -68,32 +67,28 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
       </div>
 
       <div className="form-group">
-        <button
-          type="button"
-          className="btn btn-secondary"
+        <TUIButton
+          variant="secondary"
           onClick={handleCreateRoom}
           disabled={!playerName.trim() || !isConnected}
         >
           {isConnected ? 'Create New Room' : 'Connecting...'}
-        </button>
+        </TUIButton>
 
-        <button
-          type="button"
-          className="btn"
+        <TUIButton
+          variant="primary"
           onClick={handleJoinRoom}
           disabled={!playerName.trim() || !roomId.trim() || !isConnected}
         >
           {isConnected ? 'Join Room' : 'Connecting...'}
-        </button>
+        </TUIButton>
       </div>
 
-      <div
-        className="form-group"
+      <TUIContainer
+        title="Local Modes"
         style={{ marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}
       >
-        <button
-          type="button"
-          className="btn btn-local"
+        <TUIButton
           onClick={onStartLocalGame}
           style={{
             backgroundColor: '#9C27B0',
@@ -103,11 +98,9 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
           }}
         >
           🎮 Local 2-Player Mode
-        </button>
+        </TUIButton>
 
-        <button
-          type="button"
-          className="btn btn-ai"
+        <TUIButton
           onClick={onStartAIGame}
           style={{
             backgroundColor: '#FF9800',
@@ -116,19 +109,21 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
           }}
         >
           🤖 vs AI Mode
-        </button>
-      </div>
+        </TUIButton>
+      </TUIContainer>
 
-      <div style={{ marginTop: '40px', fontSize: '14px', opacity: '0.8' }}>
-        <p>🌐 Online Multiplayer:</p>
-        <p>🎮 Create a room to host a game</p>
-        <p>🏠 Join an existing room with the Room ID</p>
-        <p>👥 Need at least 2 players to start</p>
-        <br />
-        <p>💻 Local Modes:</p>
-        <p>🎮 Two players: WASD + Space | IJKL + Enter</p>
-        <p>🤖 vs AI: WASD + Space vs Computer</p>
-      </div>
+      <TUIContainer style={{ marginTop: '40px' }}>
+        <TUIText variant="small">
+          🌐 Online Multiplayer:
+          <br />🎮 Create a room to host a game
+          <br />🏠 Join an existing room with the Room ID
+          <br />👥 Need at least 2 players to start
+          <br />
+          <br />💻 Local Modes:
+          <br />🎮 Two players: WASD + Space | IJKL + Enter
+          <br />🤖 vs AI: WASD + Space vs Computer
+        </TUIText>
+      </TUIContainer>
     </div>
   )
 }

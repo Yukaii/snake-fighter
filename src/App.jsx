@@ -3,8 +3,10 @@ import CountdownScreen from './components/CountdownScreen'
 import GameOverScreen from './components/GameOverScreen'
 import GameScreen from './components/GameScreen'
 import LobbyScreen from './components/LobbyScreen'
-import MenuScreen from './components/MenuScreen'
 import LocalGameScreen from './components/LocalGameScreen'
+import MenuScreen from './components/MenuScreen'
+import ThemeToggle from './components/ui/ThemeToggle'
+import { ThemeProvider } from './contexts/ThemeContext'
 import { useSocket } from './hooks/useSocket'
 
 const GAME_STATES = {
@@ -238,61 +240,67 @@ function App() {
   }
 
   return (
-    <div className="game-container">
-      {error && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#f44336',
-            color: 'white',
-            padding: '15px',
-            borderRadius: '8px',
-            zIndex: 1001,
-          }}
-        >
-          {error}
-        </div>
-      )}
+    <ThemeProvider>
+      <div className="game-container">
+        <ThemeToggle />
 
-      {gameState === GAME_STATES.MENU && (
-        <MenuScreen
-          onCreateRoom={createRoom}
-          onJoinRoom={joinRoom}
-          onStartLocalGame={startLocalGame}
-          onStartAIGame={startAIGame}
-          isConnected={isConnected}
-        />
-      )}
+        {error && (
+          <div
+            style={{
+              position: 'fixed',
+              top: '20px',
+              right: '20px',
+              background: '#f44336',
+              color: 'white',
+              padding: '15px',
+              borderRadius: '8px',
+              zIndex: 1001,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
-      {gameState === GAME_STATES.LOBBY && currentRoom && (
-        <LobbyScreen
-          room={currentRoom}
-          playerId={playerId}
-          onStartGame={startGame}
-          onLeaveRoom={leaveRoom}
-        />
-      )}
+        {gameState === GAME_STATES.MENU && (
+          <MenuScreen
+            onCreateRoom={createRoom}
+            onJoinRoom={joinRoom}
+            onStartLocalGame={startLocalGame}
+            onStartAIGame={startAIGame}
+            isConnected={isConnected}
+          />
+        )}
 
-      {gameState === GAME_STATES.COUNTDOWN && <CountdownScreen countdown={countdown} />}
+        {gameState === GAME_STATES.LOBBY && currentRoom && (
+          <LobbyScreen
+            room={currentRoom}
+            playerId={playerId}
+            onStartGame={startGame}
+            onLeaveRoom={leaveRoom}
+          />
+        )}
 
-      {gameState === GAME_STATES.PLAYING && <GameScreen gameData={gameData} playerId={playerId} />}
+        {gameState === GAME_STATES.COUNTDOWN && <CountdownScreen countdown={countdown} />}
 
-      {gameState === GAME_STATES.GAME_OVER && gameOverData && (
-        <GameOverScreen
-          gameOverData={gameOverData}
-          playerId={playerId}
-          onPlayAgain={returnToLobby}
-        />
-      )}
+        {gameState === GAME_STATES.PLAYING && (
+          <GameScreen gameData={gameData} playerId={playerId} />
+        )}
 
-      {gameState === GAME_STATES.LOCAL_GAME && <LocalGameScreen onReturnToMenu={returnToMenu} />}
+        {gameState === GAME_STATES.GAME_OVER && gameOverData && (
+          <GameOverScreen
+            gameOverData={gameOverData}
+            playerId={playerId}
+            onPlayAgain={returnToLobby}
+          />
+        )}
 
-      {gameState === GAME_STATES.AI_GAME && (
-        <LocalGameScreen onReturnToMenu={returnToMenu} isAIMode={true} />
-      )}
-    </div>
+        {gameState === GAME_STATES.LOCAL_GAME && <LocalGameScreen onReturnToMenu={returnToMenu} />}
+
+        {gameState === GAME_STATES.AI_GAME && (
+          <LocalGameScreen onReturnToMenu={returnToMenu} isAIMode={true} />
+        )}
+      </div>
+    </ThemeProvider>
   )
 }
 

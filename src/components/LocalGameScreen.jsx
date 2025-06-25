@@ -51,7 +51,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   const [gameOverData, setGameOverData] = useState(null)
 
   const lightenColor = (color, percent) => {
-    const num = parseInt(color.replace('#', ''), 16)
+    const num = Number.parseInt(color.replace('#', ''), 16)
     const amt = Math.round(2.55 * percent * 100)
     const R = (num >> 16) + amt
     const G = ((num >> 8) & 0x00ff) + amt
@@ -394,7 +394,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
 
     if (!currentPlayer1 || !currentPlayer2) return
 
-    let seedsEatenThisTurn = []
+    const seedsEatenThisTurn = []
 
     // Update AI direction if player 2 is AI - apply immediately for this frame
     let updatedPlayer2 = currentPlayer2
@@ -431,7 +431,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
       head1.x += currentPlayer1.direction.x * GAME_CONFIG.GRID_SIZE
       head1.y += currentPlayer1.direction.y * GAME_CONFIG.GRID_SIZE
 
-      let newSnake1 = [head1, ...currentPlayer1.snake]
+      const newSnake1 = [head1, ...currentPlayer1.snake]
 
       // Check if player 1 ate a seed
       const eatenSeedIndex1 = currentSeeds.findIndex(
@@ -463,7 +463,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
       head2.x += updatedPlayer2.direction.x * GAME_CONFIG.GRID_SIZE
       head2.y += updatedPlayer2.direction.y * GAME_CONFIG.GRID_SIZE
 
-      let newSnake2 = [head2, ...updatedPlayer2.snake]
+      const newSnake2 = [head2, ...updatedPlayer2.snake]
 
       // Check if player 2 ate a seed (that player 1 didn't already eat)
       const eatenSeedIndex2 = currentSeeds.findIndex(
@@ -669,7 +669,6 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         }
       })
     }
-
     // Draw snakes
     ;[currentPlayer1, currentPlayer2].forEach((player, playerIndex) => {
       if (!player || !player.alive || !player.snake) return
