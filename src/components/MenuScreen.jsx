@@ -1,3 +1,4 @@
+import { Desktop, GameController, Globe, Robot, Users } from 'phosphor-react'
 import React, { useState } from 'react'
 import TUIButton from './ui/TUIButton'
 import TUIContainer from './ui/TUIContainer'
@@ -32,17 +33,18 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
 
   return (
     <div className="screen">
-      <TUIText variant="h1">🐍 Snake Fighter</TUIText>
+      <TUIText variant="h1">Snake Fighter</TUIText>
 
       <TUIContainer
         style={{
-          marginBottom: '20px',
-          padding: '10px',
+          marginBottom: '10px',
+          padding: '6px 10px',
           backgroundColor: isConnected ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
           color: isConnected ? '#4CAF50' : '#f44336',
+          fontSize: '14px',
         }}
       >
-        {isConnected ? '🟢 Connected to server' : '🔴 Connecting to server...'}
+        {isConnected ? 'Connected to server' : 'Connecting to server...'}
       </TUIContainer>
 
       <div className="form-group">
@@ -86,42 +88,50 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
 
       <TUIContainer
         title="Local Modes"
-        style={{ marginTop: '20px', borderTop: '1px solid #333', paddingTop: '20px' }}
+        style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px' }}
       >
-        <TUIButton
-          onClick={onStartLocalGame}
-          style={{
-            backgroundColor: '#9C27B0',
-            color: 'white',
-            width: '100%',
-            marginBottom: '10px',
-          }}
-        >
-          🎮 Local 2-Player Mode
-        </TUIButton>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <TUIButton
+            onClick={onStartLocalGame}
+            style={{
+              backgroundColor: '#9C27B0',
+              color: 'white',
+              flex: '1',
+              minWidth: '140px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Users size={16} />
+            2-Player
+          </TUIButton>
 
-        <TUIButton
-          onClick={onStartAIGame}
-          style={{
-            backgroundColor: '#FF9800',
-            color: 'white',
-            width: '100%',
-          }}
-        >
-          🤖 vs AI Mode
-        </TUIButton>
+          <TUIButton
+            onClick={onStartAIGame}
+            style={{
+              backgroundColor: '#FF9800',
+              color: 'white',
+              flex: '1',
+              minWidth: '140px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Robot size={16} />
+            vs AI
+          </TUIButton>
+        </div>
       </TUIContainer>
 
-      <TUIContainer style={{ marginTop: '40px' }}>
-        <TUIText variant="small">
-          🌐 Online Multiplayer:
-          <br />🎮 Create a room to host a game
-          <br />🏠 Join an existing room with the Room ID
-          <br />👥 Need at least 2 players to start
+      <TUIContainer style={{ marginTop: '20px' }}>
+        <TUIText variant="small" style={{ fontSize: '12px', lineHeight: '1.4' }}>
+          <Globe size={14} style={{ display: 'inline', marginRight: '4px' }} />
+          Online: Create/join rooms (2+ players)
           <br />
-          <br />💻 Local Modes:
-          <br />🎮 Two players: WASD + Space | IJKL + Enter
-          <br />🤖 vs AI: WASD + Space vs Computer
+          <Desktop size={14} style={{ display: 'inline', marginRight: '4px' }} />
+          Local: WASD+Space | IJKL+Enter (2P) | vs AI
         </TUIText>
       </TUIContainer>
     </div>

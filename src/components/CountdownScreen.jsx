@@ -5,7 +5,7 @@ function CountdownScreen({ countdown }) {
     <div className="countdown-overlay">
       <h2>Game Starting In</h2>
       <div className="countdown-number">{countdown}</div>
-      <p style={{ fontSize: '18px', marginTop: '20px' }}>Get ready to slither! 🐍</p>
+      <p style={{ fontSize: '18px', marginTop: '20px' }}>Get ready to play!</p>
     </div>
   )
 }

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 
 const GAME_CONFIG = {
-  CANVAS_WIDTH: 800,
-  CANVAS_HEIGHT: 600,
+  CANVAS_WIDTH: 640,
+  CANVAS_HEIGHT: 480,
   GRID_SIZE: 20,
   MAX_SNAKE_LENGTH: 15,
   GAME_SPEED: 150,
@@ -921,7 +921,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           </div>
         </div>
 
-        <canvas ref={canvasRef} className="game-canvas" width={800} height={600} />
+        <canvas ref={canvasRef} className="game-canvas" width={640} height={480} />
 
         <div className="controls-info">
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>

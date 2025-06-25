@@ -1,3 +1,4 @@
+import { CheckCircle, Clock, Heart, Skull } from 'phosphor-react'
 import React, { useEffect, useRef } from 'react'
 
 function GameScreen({ gameData, playerId }) {
@@ -132,19 +133,42 @@ function GameScreen({ gameData, playerId }) {
         <div className="game-info">
           <div>Score: {myPlayer ? myPlayer.score : 0}</div>
           <div>Players Alive: {gameData.playersAlive}</div>
-          <div>My Status: {myPlayer && myPlayer.alive ? '🐍 Alive' : '💀 Eliminated'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            My Status:{' '}
+            {myPlayer && myPlayer.alive ? (
+              <>
+                <Heart size={14} color="#4CAF50" />
+                Alive
+              </>
+            ) : (
+              <>
+                <Skull size={14} color="#f44336" />
+                Eliminated
+              </>
+            )}
+          </div>
           {myPlayer && myPlayer.alive && (
-            <div>Obstacle: {myPlayer.canPlaceObstacle ? '✅ Ready' : '⏳ Cooldown'}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              Obstacle:{' '}
+              {myPlayer.canPlaceObstacle ? (
+                <>
+                  <CheckCircle size={14} color="#4CAF50" />
+                  Ready
+                </>
+              ) : (
+                <>
+                  <Clock size={14} color="#FF9800" />
+                  Cooldown
+                </>
+              )}
+            </div>
           )}
         </div>
 
-        <canvas ref={canvasRef} className="game-canvas" width={800} height={600} />
+        <canvas ref={canvasRef} className="game-canvas" width={640} height={480} />
 
         <div className="controls-info">
-          <p>Use WASD or Arrow Keys to move your snake</p>
-          <p>🟡 Eat seeds to grow and create obstacles!</p>
-          <p>Press SPACE to sacrifice tail and place dotted obstacle (15s cooldown)</p>
-          <p>Avoid walls, obstacles, and other snakes!</p>
+          <p>WASD/Arrows: Move • Seeds: Grow • SPACE: Place obstacle (15s cooldown)</p>
         </div>
       </div>
     </div>

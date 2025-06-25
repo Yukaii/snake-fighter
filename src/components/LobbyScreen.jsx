@@ -1,3 +1,4 @@
+import { Crown, GameController } from 'phosphor-react'
 import React from 'react'
 import TUIButton from './ui/TUIButton'
 import TUIContainer from './ui/TUIContainer'
@@ -31,7 +32,7 @@ function LobbyScreen({ room, playerId, onStartGame, onLeaveRoom }) {
 
         <div className="room-id-display">Room ID: {room.id}</div>
 
-        <div style={{ margin: '30px 0' }}>
+        <div style={{ margin: '15px 0' }}>
           <TUIText variant="h2">Players ({room.players.length}/8)</TUIText>
           <div className="players-grid">
             {room.players.map((player) => (
@@ -41,8 +42,12 @@ function LobbyScreen({ room, playerId, onStartGame, onLeaveRoom }) {
                 style={{
                   backgroundColor: player.color,
                   color: getContrastColor(player.color),
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}
               >
+                {player.id === room.hostId && <Crown size={14} color="#FFD700" />}
                 {player.name}
                 {player.id === room.hostId && ' (Host)'}
               </div>
@@ -68,12 +73,10 @@ function LobbyScreen({ room, playerId, onStartGame, onLeaveRoom }) {
           Leave Room
         </TUIButton>
 
-        <TUIContainer style={{ marginTop: '30px' }}>
-          <TUIText variant="small">
-            🎮 Controls: WASD or Arrow Keys
-            <br />🐍 Snake growth is limited to 15 segments
-            <br />💀 Dead snakes become obstacles
-            <br />🏆 Last player standing wins!
+        <TUIContainer style={{ marginTop: '15px' }}>
+          <TUIText variant="small" style={{ fontSize: '12px', lineHeight: '1.4' }}>
+            <GameController size={14} style={{ display: 'inline', marginRight: '4px' }} />
+            WASD/Arrows • Max 15 segments • Dead = obstacles • Last standing wins
           </TUIText>
         </TUIContainer>
       </TUIContainer>

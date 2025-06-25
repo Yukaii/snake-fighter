@@ -1,3 +1,4 @@
+import { Medal, Trophy } from 'phosphor-react'
 import React from 'react'
 
 function GameOverScreen({ gameOverData, playerId, onPlayAgain }) {
@@ -6,12 +7,22 @@ function GameOverScreen({ gameOverData, playerId, onPlayAgain }) {
   return (
     <div className="screen">
       <div className="game-over-container">
-        <h2>Game Over! 🎮</h2>
+        <h2>Game Over!</h2>
 
         <div className="score-display">Your Score: {myPlayer ? myPlayer.score : 0}</div>
 
-        <div className="winner-display">
-          {gameOverData.winner ? `🏆 Winner: ${gameOverData.winner.name}` : '🤝 No Winner'}
+        <div
+          className="winner-display"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+        >
+          {gameOverData.winner ? (
+            <>
+              <Trophy size={20} color="#FFD700" />
+              Winner: {gameOverData.winner.name}
+            </>
+          ) : (
+            'No Winner'
+          )}
         </div>
 
         <div style={{ margin: '30px 0' }}>
@@ -39,10 +50,10 @@ function GameOverScreen({ gameOverData, playerId, onPlayAgain }) {
                     border: player.id === playerId ? '2px solid #4CAF50' : 'none',
                   }}
                 >
-                  <span>
-                    {index === 0 && '🥇 '}
-                    {index === 1 && '🥈 '}
-                    {index === 2 && '🥉 '}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {index === 0 && <Trophy size={16} color="#FFD700" />}
+                    {index === 1 && <Medal size={16} color="#C0C0C0" />}
+                    {index === 2 && <Medal size={16} color="#CD7F32" />}
                     {player.name}
                     {player.id === playerId && ' (You)'}
                   </span>
