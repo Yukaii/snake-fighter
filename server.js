@@ -195,46 +195,58 @@ class GameRoom {
     player.score = Math.max(0, player.snake.length - 1)
   }
 
-  checkCollisions(player) {
+  checkWallCollision(player) {
     const head = player.snake[0]
-
-    // Wall collision
-    if (
+    return (
       head.x < 0 ||
       head.x >= GAME_CONFIG.CANVAS_WIDTH ||
       head.y < 0 ||
       head.y >= GAME_CONFIG.CANVAS_HEIGHT
-    ) {
-      this.eliminatePlayer(player)
-      return
-    }
+    )
+  }
 
-    // Self collision
+  checkSelfCollision(player) {
+    const head = player.snake[0]
     for (let i = 1; i < player.snake.length; i++) {
       if (head.x === player.snake[i].x && head.y === player.snake[i].y) {
-        this.eliminatePlayer(player)
-        return
+        return true
       }
     }
+    return false
+  }
 
-    // Other players collision
+  checkOtherPlayersCollision(player) {
+    const head = player.snake[0]
     for (const otherPlayer of this.players) {
       if (otherPlayer.id !== player.id && otherPlayer.alive) {
         for (const segment of otherPlayer.snake) {
           if (head.x === segment.x && head.y === segment.y) {
-            this.eliminatePlayer(player)
-            return
+            return true
           }
         }
       }
     }
+    return false
+  }
 
-    // Obstacle collision
+  checkObstacleCollision(player) {
+    const head = player.snake[0]
     for (const obstacle of this.obstacles) {
       if (head.x === obstacle.x && head.y === obstacle.y) {
-        this.eliminatePlayer(player)
-        return
+        return true
       }
+    }
+    return false
+  }
+
+  checkCollisions(player) {
+    if (
+      this.checkWallCollision(player) ||
+      this.checkSelfCollision(player) ||
+      this.checkOtherPlayersCollision(player) ||
+      this.checkObstacleCollision(player)
+    ) {
+      this.eliminatePlayer(player)
     }
   }
 
@@ -400,22 +412,30 @@ io.on('connection', (socket) => {
     handlePlayerLeave(socket.id)
   })
 
+  function cleanupEmptyRoom(roomId, room) {
+    if (room.gameLoop) clearInterval(room.gameLoop)
+    if (room.countdownTimer) clearInterval(room.countdownTimer)
+    rooms.delete(roomId)
+    console.log(`Room ${roomId} deleted`)
+  }
+
+  function notifyRoomUpdate(roomId, room) {
+    socket.to(roomId).emit('room-updated', { room: room.getRoomData() })
+  }
+
   function handlePlayerLeave(playerId) {
     for (const [roomId, room] of rooms.entries()) {
-      if (room.players.has(playerId)) {
-        room.removePlayer(playerId)
-        socket.to(roomId).emit('player-left', { playerId })
+      if (!room.players.has(playerId)) continue
 
-        if (room.players.size === 0) {
-          if (room.gameLoop) clearInterval(room.gameLoop)
-          if (room.countdownTimer) clearInterval(room.countdownTimer)
-          rooms.delete(roomId)
-          console.log(`Room ${roomId} deleted`)
-        } else {
-          socket.to(roomId).emit('room-updated', { room: room.getRoomData() })
-        }
-        break
+      room.removePlayer(playerId)
+      socket.to(roomId).emit('player-left', { playerId })
+
+      if (room.players.size === 0) {
+        cleanupEmptyRoom(roomId, room)
+      } else {
+        notifyRoomUpdate(roomId, room)
       }
+      break
     }
   }
 })

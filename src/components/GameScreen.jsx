@@ -1,46 +1,74 @@
 import { CheckCircle, Clock, Heart, Skull } from 'phosphor-react'
 import React, { useCallback, useEffect, useRef } from 'react'
 
-function GameScreen({ gameData, playerId }) {
-  const canvasRef = useRef(null)
+const lightenColor = (color, percent) => {
+  const num = Number.parseInt(color.replace('#', ''), 16)
+  const amt = Math.round(2.55 * percent * 100)
+  const R = (num >> 16) + amt
+  const G = ((num >> 8) & 0x00ff) + amt
+  const B = (num & 0x0000ff) + amt
+  return `#${(
+    0x1000000 +
+    (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+    (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+    (B < 255 ? (B < 1 ? 0 : B) : 255)
+  )
+    .toString(16)
+    .slice(1)}`
+}
 
-  const lightenColor = (color, percent) => {
-    const num = Number.parseInt(color.replace('#', ''), 16)
-    const amt = Math.round(2.55 * percent * 100)
-    const R = (num >> 16) + amt
-    const G = ((num >> 8) & 0x00ff) + amt
-    const B = (num & 0x0000ff) + amt
-    return `#${(
-      0x1000000 +
-      (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-      (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-      (B < 255 ? (B < 1 ? 0 : B) : 255)
-    )
-      .toString(16)
-      .slice(1)}`
-  }
+const drawDottedObstacle = (ctx, obstacle) => {
+  // Draw dotted obstacle
+  ctx.fillStyle = '#999'
+  ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
 
-  const drawDottedObstacle = (ctx, obstacle) => {
-    // Draw dotted obstacle
-    ctx.fillStyle = '#999'
-    ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
-
-    // Add dotted pattern
-    ctx.fillStyle = '#333'
-    for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < 4; j++) {
-        if ((i + j) % 2 === 0) {
-          ctx.fillRect(obstacle.x + 2 + i * 4, obstacle.y + 2 + j * 4, 2, 2)
-        }
+  // Add dotted pattern
+  ctx.fillStyle = '#333'
+  for (let i = 0; i < 4; i++) {
+    for (let j = 0; j < 4; j++) {
+      if ((i + j) % 2 === 0) {
+        ctx.fillRect(obstacle.x + 2 + i * 4, obstacle.y + 2 + j * 4, 2, 2)
       }
     }
   }
+}
 
-  const drawSolidObstacle = (ctx, obstacle) => {
-    // Draw solid obstacle (from seeds or dead snakes)
-    ctx.fillStyle = '#666'
-    ctx.fillRect(obstacle.x, obstacle.y, 20, 20)
+const drawSolidObstacle = (ctx, obstacle) => {
+  // Draw solid obstacle (from seeds or dead snakes)
+  ctx.fillStyle = '#666'
+  ctx.fillRect(obstacle.x, obstacle.y, 20, 20)
+}
+
+const drawSnakeHead = (ctx, segment, player, isCurrentPlayer) => {
+  ctx.fillStyle = player.color
+  ctx.fillRect(segment.x, segment.y, 20, 20)
+
+  // Add white outline for current player
+  if (isCurrentPlayer) {
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 3
+    ctx.strokeRect(segment.x - 1, segment.y - 1, 22, 22)
   }
+
+  ctx.strokeStyle = '#fff'
+  ctx.lineWidth = 2
+  ctx.strokeRect(segment.x, segment.y, 20, 20)
+}
+
+const drawSnakeBody = (ctx, segment, player, isCurrentPlayer) => {
+  ctx.fillStyle = lightenColor(player.color, 0.3)
+  ctx.fillRect(segment.x + 1, segment.y + 1, 18, 18)
+
+  // Add white outline for current player's body
+  if (isCurrentPlayer) {
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 2
+    ctx.strokeRect(segment.x, segment.y, 20, 20)
+  }
+}
+
+function GameScreen({ gameData, playerId }) {
+  const canvasRef = useRef(null)
 
   const drawSeeds = useCallback((ctx) => {
     if (!gameData.seeds) return
@@ -68,35 +96,8 @@ function GameScreen({ gameData, playerId }) {
         drawSolidObstacle(ctx, obstacle)
       }
     }
-  }, [gameData, drawDottedObstacle, drawSolidObstacle])
+  }, [gameData])
 
-  const drawSnakeHead = (ctx, segment, player, isCurrentPlayer) => {
-    ctx.fillStyle = player.color
-    ctx.fillRect(segment.x, segment.y, 20, 20)
-
-    // Add white outline for current player
-    if (isCurrentPlayer) {
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 3
-      ctx.strokeRect(segment.x - 1, segment.y - 1, 22, 22)
-    }
-
-    ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 2
-    ctx.strokeRect(segment.x, segment.y, 20, 20)
-  }
-
-  const drawSnakeBody = (ctx, segment, player, isCurrentPlayer) => {
-    ctx.fillStyle = lightenColor(player.color, 0.3)
-    ctx.fillRect(segment.x + 1, segment.y + 1, 18, 18)
-
-    // Add white outline for current player's body
-    if (isCurrentPlayer) {
-      ctx.strokeStyle = '#fff'
-      ctx.lineWidth = 2
-      ctx.strokeRect(segment.x, segment.y, 20, 20)
-    }
-  }
 
   const drawSnakes = useCallback((ctx) => {
     for (const player of gameData.players) {
@@ -112,7 +113,7 @@ function GameScreen({ gameData, playerId }) {
         }
       }
     }
-  }, [gameData, playerId, drawSnakeHead, drawSnakeBody])
+  }, [gameData, playerId])
 
   const renderGame = useCallback(() => {
     if (!gameData || !canvasRef.current) return

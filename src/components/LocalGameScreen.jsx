@@ -56,17 +56,14 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     const R = (num >> 16) + amt
     const G = ((num >> 8) & 0x00ff) + amt
     const B = (num & 0x0000ff) + amt
-    return (
-      '#' +
-      (
-        0x1000000 +
-        (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-        (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-        (B < 255 ? (B < 1 ? 0 : B) : 255)
-      )
-        .toString(16)
-        .slice(1)
+    return `#${(
+      0x1000000 +
+      (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+      (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+      (B < 255 ? (B < 1 ? 0 : B) : 255)
     )
+      .toString(16)
+      .slice(1)}`
   }
 
   const isPositionFree = (
@@ -80,30 +77,27 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   ) => {
     // Check obstacles
     if (
-      currentObstacles &&
-      currentObstacles.some((obstacle) => obstacle.x === x && obstacle.y === y)
+      currentObstacles?.some((obstacle) => obstacle.x === x && obstacle.y === y)
     ) {
       return false
     }
 
     // Check seeds
-    if (currentSeeds && currentSeeds.some((seed) => seed.x === x && seed.y === y)) {
+    if (currentSeeds?.some((seed) => seed.x === x && seed.y === y)) {
       return false
     }
 
     if (!excludeSnakes) {
       // Check both snakes
       if (
-        currentPlayer1 &&
-        currentPlayer1.alive &&
+        currentPlayer1?.alive &&
         currentPlayer1.snake &&
         currentPlayer1.snake.some((segment) => segment.x === x && segment.y === y)
       ) {
         return false
       }
       if (
-        currentPlayer2 &&
-        currentPlayer2.alive &&
+        currentPlayer2?.alive &&
         currentPlayer2.snake &&
         currentPlayer2.snake.some((segment) => segment.x === x && segment.y === y)
       ) {
@@ -213,8 +207,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
 
       // Check human player collision
       if (
-        humanPlayer &&
-        humanPlayer.alive &&
+        humanPlayer?.alive &&
         humanPlayer.snake.some((segment) => segment.x === pos.x && segment.y === pos.y)
       ) {
         return false
@@ -224,13 +217,29 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     }
 
     // Calculate available space from a position using flood fill
+    const getNeighbors = (pos) => [
+      { x: pos.x, y: pos.y - GAME_CONFIG.GRID_SIZE },
+      { x: pos.x, y: pos.y + GAME_CONFIG.GRID_SIZE },
+      { x: pos.x - GAME_CONFIG.GRID_SIZE, y: pos.y },
+      { x: pos.x + GAME_CONFIG.GRID_SIZE, y: pos.y },
+    ]
+
+    const addUnvisitedNeighbors = (pos, queue, visited) => {
+      const neighbors = getNeighbors(pos)
+      for (const neighbor of neighbors) {
+        const neighborKey = `${neighbor.x},${neighbor.y}`
+        if (!visited.has(neighborKey)) {
+          queue.push(neighbor)
+        }
+      }
+    }
+
     const calculateAvailableSpace = (startPos) => {
       const visited = new Set()
       const queue = [startPos]
       let spaceCount = 0
 
       while (queue.length > 0 && spaceCount < 50) {
-        // Limit search to prevent lag
         const pos = queue.shift()
         const key = `${pos.x},${pos.y}`
 
@@ -240,20 +249,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         if (!isPositionSafe(pos)) continue
 
         spaceCount++
-
-        // Add neighboring positions
-        const neighbors = [
-          { x: pos.x, y: pos.y - GAME_CONFIG.GRID_SIZE },
-          { x: pos.x, y: pos.y + GAME_CONFIG.GRID_SIZE },
-          { x: pos.x - GAME_CONFIG.GRID_SIZE, y: pos.y },
-          { x: pos.x + GAME_CONFIG.GRID_SIZE, y: pos.y },
-        ]
-
-        for (const neighbor of neighbors) {
-          if (!visited.has(`${neighbor.x},${neighbor.y}`)) {
-            queue.push(neighbor)
-          }
-        }
+        addUnvisitedNeighbors(pos, queue, visited)
       }
 
       return spaceCount
@@ -374,7 +370,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     }
 
     // Check collision with other player
-    if (otherPlayer && otherPlayer.alive && otherPlayer.snake) {
+    if (otherPlayer?.alive && otherPlayer.snake) {
       if (otherPlayer.snake.some((segment) => segment.x === head.x && segment.y === head.y)) {
         return true
       }
@@ -635,7 +631,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     // Draw seeds
     if (currentSeeds && currentSeeds.length > 0) {
       ctx.fillStyle = '#FFD700'
-      currentSeeds.forEach((seed) => {
+      for (const seed of currentSeeds) {
         ctx.beginPath()
         ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
         ctx.fill()
@@ -645,12 +641,12 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         ctx.arc(seed.x + 8, seed.y + 8, 3, 0, 2 * Math.PI)
         ctx.fill()
         ctx.fillStyle = '#FFD700'
-      })
+      }
     }
 
     // Draw obstacles
     if (currentObstacles && currentObstacles.length > 0) {
-      currentObstacles.forEach((obstacle) => {
+      for (const obstacle of currentObstacles) {
         if (obstacle.type === 'dotted') {
           ctx.fillStyle = '#999'
           ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
@@ -667,17 +663,17 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           ctx.fillStyle = '#666'
           ctx.fillRect(obstacle.x, obstacle.y, 20, 20)
         }
-      })
+      }
     }
     // Draw snakes
-    ;[currentPlayer1, currentPlayer2].forEach((player, playerIndex) => {
-      if (!player || !player.alive || !player.snake) return
+    for (const [playerIndex, player] of [currentPlayer1, currentPlayer2].entries()) {
+      if (!player || !player.alive || !player.snake) continue
 
       // In AI mode, highlight the human player (player1)
       // In local mode (non-AI), don't highlight anyone
       const isCurrentPlayer = isAIMode && playerIndex === 0
 
-      player.snake.forEach((segment, index) => {
+      for (const [index, segment] of player.snake.entries()) {
         if (index === 0) {
           // Draw head
           ctx.fillStyle = player.color
@@ -705,8 +701,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
             ctx.strokeRect(segment.x, segment.y, 20, 20)
           }
         }
-      })
-    })
+      }
+    }
   }
 
   // Countdown effect
