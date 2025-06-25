@@ -1,8 +1,8 @@
 const express = require('express')
-const http = require('http')
+const http = require('node:http')
 const socketIo = require('socket.io')
 const { v4: uuidv4 } = require('uuid')
-const path = require('path')
+const path = require('node:path')
 const cors = require('cors')
 
 const app = express()
@@ -32,11 +32,11 @@ app.use(express.static(path.join(__dirname, 'dist')))
 // API routes for socket.io are handled automatically
 
 // Catch-all handler: send back React's index.html file for SPA routing
-app.get('*', (req, res) => {
+app.get('*', (_req, res) => {
   const indexPath = path.join(__dirname, 'dist', 'index.html')
 
   // Check if the dist/index.html exists
-  if (require('fs').existsSync(indexPath)) {
+  if (require('node:fs').existsSync(indexPath)) {
     res.sendFile(indexPath)
   } else {
     // Fallback: serve a simple message if build doesn't exist
@@ -143,13 +143,13 @@ class GameRoom {
     this.gameState = 'playing'
     this.startTime = Date.now()
 
-    this.players.forEach((player) => {
+    for (const player of this.players) {
       player.alive = true
       player.score = 0
       player.snake = this.createSnake()
       player.direction = { x: 1, y: 0 }
       player.nextDirection = { x: 1, y: 0 }
-    })
+    }
 
     this.obstacles = []
 
@@ -174,11 +174,11 @@ class GameRoom {
       return
     }
 
-    alivePlayers.forEach((player) => {
+    for (const player of alivePlayers) {
       player.direction = { ...player.nextDirection }
       this.moveSnake(player)
       this.checkCollisions(player)
-    })
+    }
   }
 
   moveSnake(player) {
@@ -218,7 +218,7 @@ class GameRoom {
     }
 
     // Other players collision
-    this.players.forEach((otherPlayer) => {
+    for (const otherPlayer of this.players) {
       if (otherPlayer.id !== player.id && otherPlayer.alive) {
         for (const segment of otherPlayer.snake) {
           if (head.x === segment.x && head.y === segment.y) {
@@ -227,7 +227,7 @@ class GameRoom {
           }
         }
       }
-    })
+    }
 
     // Obstacle collision
     for (const obstacle of this.obstacles) {
@@ -242,9 +242,9 @@ class GameRoom {
     player.alive = false
 
     // Convert snake body to obstacles
-    player.snake.forEach((segment) => {
+    for (const segment of player.snake) {
       this.obstacles.push({ ...segment })
-    })
+    }
 
     io.to(this.id).emit('player-eliminated', {
       playerId: player.id,

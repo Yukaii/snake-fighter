@@ -47,6 +47,7 @@ const ThemeToggle = ({ className = '', style = {} }) => {
       }}
     >
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
         style={{
           background: 'rgba(0, 0, 0, 0.7)',
@@ -94,6 +95,7 @@ const ThemeToggle = ({ className = '', style = {} }) => {
         >
           {availableThemes.map((theme) => (
             <button
+              type="button"
               key={theme}
               onClick={() => {
                 switchTheme(theme)

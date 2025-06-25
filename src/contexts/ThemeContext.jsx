@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { defaultTheme, themes } from '../themes'
 
 const ThemeContext = createContext()
@@ -30,7 +30,7 @@ export const ThemeProvider = ({ children }) => {
     }
   }
 
-  const getThemeStyles = () => ({
+  const getThemeStyles = useCallback(() => ({
     '--color-primary': currentTheme.colors.primary,
     '--color-secondary': currentTheme.colors.secondary,
     '--color-danger': currentTheme.colors.danger,
@@ -53,15 +53,15 @@ export const ThemeProvider = ({ children }) => {
     '--shadow-small': currentTheme.shadows.small,
     '--shadow-medium': currentTheme.shadows.medium,
     '--shadow-large': currentTheme.shadows.large,
-  })
+  }), [currentTheme])
 
   useEffect(() => {
     const root = document.documentElement
     const styles = getThemeStyles()
-    Object.entries(styles).forEach(([property, value]) => {
+    for (const [property, value] of Object.entries(styles)) {
       root.style.setProperty(property, value)
-    })
-  }, [currentTheme])
+    }
+  }, [getThemeStyles])
 
   const value = {
     theme: currentTheme,
