@@ -39,7 +39,7 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
         style={{
           marginBottom: '10px',
           padding: '6px 10px',
-          backgroundColor: isConnected ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+          background: isConnected ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
           color: isConnected ? '#4CAF50' : '#f44336',
           fontSize: '14px',
         }}
@@ -86,15 +86,13 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
         </TUIButton>
       </div>
 
-      <TUIContainer
-        title="Local Modes"
-        style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px' }}
-      >
+      <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px' }}>
+        <TUIContainer title="Local Modes">
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <TUIButton
             onClick={onStartLocalGame}
             style={{
-              backgroundColor: '#9C27B0',
+              background: '#9C27B0',
               color: 'white',
               flex: '1',
               minWidth: '140px',
@@ -110,7 +108,7 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
           <TUIButton
             onClick={onStartAIGame}
             style={{
-              backgroundColor: '#FF9800',
+              background: '#FF9800',
               color: 'white',
               flex: '1',
               minWidth: '140px',
@@ -123,7 +121,8 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
             vs AI
           </TUIButton>
         </div>
-      </TUIContainer>
+        </TUIContainer>
+      </div>
 
       <TUIContainer style={{ marginTop: '20px' }}>
         <TUIText variant="small" style={{ fontSize: '12px', lineHeight: '1.4' }}>
