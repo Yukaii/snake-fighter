@@ -254,7 +254,7 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
       h(Text, {
         key: 'players',
         color: COLORS.textSecondary
-      }, `Players: ${room.players.length}/${room.maxPlayers}`)
+      }, `Players: ${room.players.length}/8`)
     ])),
 
     h(Box, {
@@ -375,7 +375,15 @@ const GameScreen = ({ gameData, playerId }) => {
       })
     }
 
-    const display = grid.map(row => row.join('')).join('\n')
+    // Add border to the game display
+    const gridLines = grid.map(row => row.join(''))
+    const topBottom = '─'.repeat(width + 2)
+    const borderedLines = [
+      '┌' + topBottom + '┐',
+      ...gridLines.map(line => '│' + line + '│'),
+      '└' + topBottom + '┘'
+    ]
+    const display = borderedLines.join('\n')
     setGameDisplay(display)
   }, [gameData])
 
@@ -565,7 +573,7 @@ const SnakeFighterTUI = () => {
       setGameState(GAME_STATES.PLAYING)
     })
 
-    socketInstance.on('game-state', (data) => {
+    socketInstance.on('game-update', (data) => {
       setGameData(data)
     })
 
@@ -608,7 +616,7 @@ const SnakeFighterTUI = () => {
       }
 
       if (direction) {
-        socket.emit('player-move', direction)
+        socket.emit('player-direction', direction)
       }
     }
 
