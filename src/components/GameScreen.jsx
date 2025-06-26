@@ -1,5 +1,6 @@
 import { CheckCircle, Clock, Heart, Skull } from 'phosphor-react'
-import React, { useCallback, useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import MobileController from './ui/MobileController'
 
 const lightenColor = (color, percent) => {
   const num = Number.parseInt(color.replace('#', ''), 16)
@@ -67,53 +68,63 @@ const drawSnakeBody = (ctx, segment, player, isCurrentPlayer) => {
   }
 }
 
-function GameScreen({ gameData, playerId }) {
+function GameScreen({ gameData, playerId, socket, isConnected }) {
   const canvasRef = useRef(null)
+  const [controlType, setControlType] = useState('arrows')
+  const [showMobileControls, setShowMobileControls] = useState(false)
 
-  const drawSeeds = useCallback((ctx) => {
-    if (!gameData.seeds) return
-    
-    ctx.fillStyle = '#FFD700' // Gold color for seeds
-    for (const seed of gameData.seeds) {
-      ctx.beginPath()
-      ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
-      ctx.fill()
+  const drawSeeds = useCallback(
+    (ctx) => {
+      if (!gameData.seeds) return
 
-      // Add a small highlight
-      ctx.fillStyle = '#FFF'
-      ctx.beginPath()
-      ctx.arc(seed.x + 8, seed.y + 8, 3, 0, 2 * Math.PI)
-      ctx.fill()
-      ctx.fillStyle = '#FFD700'
-    }
-  }, [gameData])
+      ctx.fillStyle = '#FFD700' // Gold color for seeds
+      for (const seed of gameData.seeds) {
+        ctx.beginPath()
+        ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
+        ctx.fill()
 
-  const drawObstacles = useCallback((ctx) => {
-    for (const obstacle of gameData.obstacles) {
-      if (obstacle.type === 'dotted') {
-        drawDottedObstacle(ctx, obstacle)
-      } else {
-        drawSolidObstacle(ctx, obstacle)
+        // Add a small highlight
+        ctx.fillStyle = '#FFF'
+        ctx.beginPath()
+        ctx.arc(seed.x + 8, seed.y + 8, 3, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.fillStyle = '#FFD700'
       }
-    }
-  }, [gameData])
+    },
+    [gameData]
+  )
 
-
-  const drawSnakes = useCallback((ctx) => {
-    for (const player of gameData.players) {
-      if (!player.alive) continue
-
-      const isCurrentPlayer = player.id === playerId
-
-      for (const [index, segment] of player.snake.entries()) {
-        if (index === 0) {
-          drawSnakeHead(ctx, segment, player, isCurrentPlayer)
+  const drawObstacles = useCallback(
+    (ctx) => {
+      for (const obstacle of gameData.obstacles) {
+        if (obstacle.type === 'dotted') {
+          drawDottedObstacle(ctx, obstacle)
         } else {
-          drawSnakeBody(ctx, segment, player, isCurrentPlayer)
+          drawSolidObstacle(ctx, obstacle)
         }
       }
-    }
-  }, [gameData, playerId])
+    },
+    [gameData]
+  )
+
+  const drawSnakes = useCallback(
+    (ctx) => {
+      for (const player of gameData.players) {
+        if (!player.alive) continue
+
+        const isCurrentPlayer = player.id === playerId
+
+        for (const [index, segment] of player.snake.entries()) {
+          if (index === 0) {
+            drawSnakeHead(ctx, segment, player, isCurrentPlayer)
+          } else {
+            drawSnakeBody(ctx, segment, player, isCurrentPlayer)
+          }
+        }
+      }
+    },
+    [gameData, playerId]
+  )
 
   const renderGame = useCallback(() => {
     if (!gameData || !canvasRef.current) return
@@ -133,6 +144,28 @@ function GameScreen({ gameData, playerId }) {
   useEffect(() => {
     renderGame()
   }, [renderGame])
+
+  // Detect mobile device
+  useEffect(() => {
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0
+    setShowMobileControls(isMobile)
+  }, [])
+
+  const handleMobileDirection = useCallback(
+    (direction) => {
+      if (!socket || !isConnected) return
+      socket.emit('player-direction', direction)
+    },
+    [socket, isConnected]
+  )
+
+  const handleMobileObstacle = useCallback(() => {
+    if (!socket || !isConnected) return
+    socket.emit('place-obstacle')
+  }, [socket, isConnected])
 
   if (!gameData) {
     return (
@@ -188,8 +221,37 @@ function GameScreen({ gameData, playerId }) {
 
         <div className="controls-info">
           <p>WASD/Arrows: Move • Seeds: Grow • SPACE: Place obstacle (15s cooldown)</p>
+          {showMobileControls && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
+              <label htmlFor="control-type-select" style={{ fontSize: '14px' }}>Control Type:</label>
+              <select
+                id="control-type-select"
+                value={controlType}
+                onChange={(e) => setControlType(e.target.value)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '5px',
+                  border: '1px solid #ccc',
+                  background: 'var(--bg-color)',
+                  color: 'var(--text-color)',
+                }}
+              >
+                <option value="arrows">Arrow Keys</option>
+                <option value="joystick">Joystick</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
+
+      {showMobileControls && (
+        <MobileController
+          onDirectionChange={handleMobileDirection}
+          onObstaclePlace={handleMobileObstacle}
+          controlType={controlType}
+          disabled={!myPlayer?.alive}
+        />
+      )}
     </div>
   )
 }

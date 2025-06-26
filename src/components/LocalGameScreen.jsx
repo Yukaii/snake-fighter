@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import MobileController from './ui/MobileController'
 
 const GAME_CONFIG = {
   CANVAS_WIDTH: 640,
@@ -49,6 +50,8 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   const [obstacles, setObstacles] = useState([])
   const [seeds, setSeeds] = useState([])
   const [gameOverData, setGameOverData] = useState(null)
+  const [controlType, setControlType] = useState('arrows')
+  const [showMobileControls, setShowMobileControls] = useState(false)
 
   const lightenColor = (color, percent) => {
     const num = Number.parseInt(color.replace('#', ''), 16)
@@ -76,9 +79,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     currentPlayer2 = player2
   ) => {
     // Check obstacles
-    if (
-      currentObstacles?.some((obstacle) => obstacle.x === x && obstacle.y === y)
-    ) {
+    if (currentObstacles?.some((obstacle) => obstacle.x === x && obstacle.y === y)) {
       return false
     }
 
@@ -136,13 +137,16 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     return now - player.lastObstaclePlacement >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
   }
 
-  const placeObstacle = (playerNum) => {
-    const player = playerNum === 1 ? player1 : player2
+  const placeObstacle = useCallback((playerNum) => {
     const setPlayer = playerNum === 1 ? setPlayer1 : setPlayer2
 
-    if (!canPlaceObstacle(player)) return
-
     setPlayer((prev) => {
+      // Check if we can place obstacle using current state
+      if (!prev.alive || prev.snake.length <= 1) return prev
+      
+      const now = Date.now()
+      if (now - prev.lastObstaclePlacement < GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN) return prev
+
       const newSnake = [...prev.snake]
       const tail = newSnake.pop()
 
@@ -162,10 +166,10 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         ...prev,
         snake: newSnake,
         score: Math.max(0, newSnake.length - 1),
-        lastObstaclePlacement: Date.now(),
+        lastObstaclePlacement: now,
       }
     })
-  }
+  }, [])
 
   const calculateAIDirection = (aiPlayer, humanPlayer, currentSeeds, currentObstacles) => {
     if (!aiPlayer.alive) return aiPlayer.direction
@@ -615,7 +619,7 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         }
       }
     },
-    [gameState, player1, player2]
+    [gameState, placeObstacle]
   )
 
   const renderGame = (currentPlayer1, currentPlayer2, currentObstacles, currentSeeds) => {
@@ -809,6 +813,44 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     return () => document.removeEventListener('keydown', handleKeyPress)
   }, [handleKeyPress])
 
+  // Detect mobile device
+  useEffect(() => {
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0
+    setShowMobileControls(isMobile)
+  }, [])
+
+  const handleMobileDirection = useCallback(
+    (direction) => {
+      if (gameState !== 'playing') return
+
+      setPlayer1((prev) => {
+        // Prevent 180-degree turn
+        if (direction.x === 0 && direction.y === -1 && prev.direction.y !== 1) {
+          return { ...prev, nextDirection: { x: 0, y: -1 } }
+        }
+        if (direction.x === 0 && direction.y === 1 && prev.direction.y !== -1) {
+          return { ...prev, nextDirection: { x: 0, y: 1 } }
+        }
+        if (direction.x === -1 && direction.y === 0 && prev.direction.x !== 1) {
+          return { ...prev, nextDirection: { x: -1, y: 0 } }
+        }
+        if (direction.x === 1 && direction.y === 0 && prev.direction.x !== -1) {
+          return { ...prev, nextDirection: { x: 1, y: 0 } }
+        }
+        return prev
+      })
+    },
+    [gameState]
+  )
+
+  const handleMobileObstacle = useCallback(() => {
+    if (gameState !== 'playing') return
+    placeObstacle(1)
+  }, [gameState, placeObstacle])
+
   const restartGame = () => {
     setGameState('countdown')
     setCountdown(3)
@@ -941,8 +983,45 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
           <p style={{ textAlign: 'center', marginTop: '10px' }}>
             🟡 Eat seeds to grow • Press action key to place dotted obstacles (15s cooldown)
           </p>
+          {showMobileControls && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                marginTop: '10px',
+              }}
+            >
+              <label htmlFor="local-control-type-select" style={{ fontSize: '14px' }}>Control Type:</label>
+              <select
+                id="local-control-type-select"
+                value={controlType}
+                onChange={(e) => setControlType(e.target.value)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '5px',
+                  border: '1px solid #ccc',
+                  background: 'var(--bg-color)',
+                  color: 'var(--text-color)',
+                }}
+              >
+                <option value="arrows">Arrow Keys</option>
+                <option value="joystick">Joystick</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
+
+      {showMobileControls && (
+        <MobileController
+          onDirectionChange={handleMobileDirection}
+          onObstaclePlace={handleMobileObstacle}
+          controlType={controlType}
+          disabled={!player1.alive || gameState !== 'playing'}
+        />
+      )}
     </div>
   )
 }

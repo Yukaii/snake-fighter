@@ -190,18 +190,18 @@ class GameRoom {
 
   isPositionFree(x, y) {
     // Check obstacles
-    if (this.obstacles.some(obstacle => obstacle.x === x && obstacle.y === y)) {
+    if (this.obstacles.some((obstacle) => obstacle.x === x && obstacle.y === y)) {
       return false
     }
 
     // Check seeds
-    if (this.seeds.some(seed => seed.x === x && seed.y === y)) {
+    if (this.seeds.some((seed) => seed.x === x && seed.y === y)) {
       return false
     }
 
     // Check all snakes
     for (const player of this.players.values()) {
-      if (player.alive && player.snake.some(segment => segment.x === x && segment.y === y)) {
+      if (player.alive && player.snake.some((segment) => segment.x === x && segment.y === y)) {
         return false
       }
     }
@@ -216,8 +216,12 @@ class GameRoom {
     const maxAttempts = 100
 
     while (attempts < maxAttempts) {
-      const x = Math.floor(Math.random() * (GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.GRID_SIZE)) * GAME_CONFIG.GRID_SIZE
-      const y = Math.floor(Math.random() * (GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.GRID_SIZE)) * GAME_CONFIG.GRID_SIZE
+      const x =
+        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.GRID_SIZE)) *
+        GAME_CONFIG.GRID_SIZE
+      const y =
+        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.GRID_SIZE)) *
+        GAME_CONFIG.GRID_SIZE
 
       if (this.isPositionFree(x, y)) {
         this.seeds.push({ x, y })
@@ -252,7 +256,7 @@ class GameRoom {
     player.snake.unshift(head)
 
     // Check if player ate a seed
-    const eatenSeedIndex = this.seeds.findIndex(seed => seed.x === head.x && seed.y === head.y)
+    const eatenSeedIndex = this.seeds.findIndex((seed) => seed.x === head.x && seed.y === head.y)
 
     if (eatenSeedIndex !== -1) {
       // Remove the eaten seed

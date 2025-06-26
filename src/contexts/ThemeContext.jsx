@@ -30,30 +30,33 @@ export const ThemeProvider = ({ children }) => {
     }
   }
 
-  const getThemeStyles = useCallback(() => ({
-    '--color-primary': currentTheme.colors.primary,
-    '--color-secondary': currentTheme.colors.secondary,
-    '--color-danger': currentTheme.colors.danger,
-    '--color-background': currentTheme.colors.background,
-    '--color-surface': currentTheme.colors.surface,
-    '--color-text': currentTheme.colors.text,
-    '--color-text-secondary': currentTheme.colors.textSecondary,
-    '--color-border': currentTheme.colors.border,
-    '--color-accent': currentTheme.colors.accent,
-    '--font-family': currentTheme.typography.fontFamily,
-    '--font-size-small': currentTheme.typography.fontSize.small,
-    '--font-size-medium': currentTheme.typography.fontSize.medium,
-    '--font-size-large': currentTheme.typography.fontSize.large,
-    '--font-size-xlarge': currentTheme.typography.fontSize.xlarge,
-    '--spacing-small': currentTheme.spacing.small,
-    '--spacing-medium': currentTheme.spacing.medium,
-    '--spacing-large': currentTheme.spacing.large,
-    '--spacing-xlarge': currentTheme.spacing.xlarge,
-    '--border-radius': currentTheme.borderRadius,
-    '--shadow-small': currentTheme.shadows.small,
-    '--shadow-medium': currentTheme.shadows.medium,
-    '--shadow-large': currentTheme.shadows.large,
-  }), [currentTheme])
+  const getThemeStyles = useCallback(
+    () => ({
+      '--color-primary': currentTheme.colors.primary,
+      '--color-secondary': currentTheme.colors.secondary,
+      '--color-danger': currentTheme.colors.danger,
+      '--color-background': currentTheme.colors.background,
+      '--color-surface': currentTheme.colors.surface,
+      '--color-text': currentTheme.colors.text,
+      '--color-text-secondary': currentTheme.colors.textSecondary,
+      '--color-border': currentTheme.colors.border,
+      '--color-accent': currentTheme.colors.accent,
+      '--font-family': currentTheme.typography.fontFamily,
+      '--font-size-small': currentTheme.typography.fontSize.small,
+      '--font-size-medium': currentTheme.typography.fontSize.medium,
+      '--font-size-large': currentTheme.typography.fontSize.large,
+      '--font-size-xlarge': currentTheme.typography.fontSize.xlarge,
+      '--spacing-small': currentTheme.spacing.small,
+      '--spacing-medium': currentTheme.spacing.medium,
+      '--spacing-large': currentTheme.spacing.large,
+      '--spacing-xlarge': currentTheme.spacing.xlarge,
+      '--border-radius': currentTheme.borderRadius,
+      '--shadow-small': currentTheme.shadows.small,
+      '--shadow-medium': currentTheme.shadows.medium,
+      '--shadow-large': currentTheme.shadows.large,
+    }),
+    [currentTheme]
+  )
 
   useEffect(() => {
     const root = document.documentElement

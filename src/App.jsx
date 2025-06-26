@@ -283,7 +283,12 @@ function App() {
         {gameState === GAME_STATES.COUNTDOWN && <CountdownScreen countdown={countdown} />}
 
         {gameState === GAME_STATES.PLAYING && (
-          <GameScreen gameData={gameData} playerId={playerId} />
+          <GameScreen
+            gameData={gameData}
+            playerId={playerId}
+            socket={socket}
+            isConnected={isConnected}
+          />
         )}
 
         {gameState === GAME_STATES.GAME_OVER && gameOverData && (

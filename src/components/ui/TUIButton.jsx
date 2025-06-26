@@ -67,7 +67,7 @@ const TUIButton = ({
 
   const getButtonStyles = () => {
     const baseStyles = getBaseStyles()
-    
+
     if (disabled) {
       return getDisabledStyles(baseStyles)
     }
@@ -111,7 +111,13 @@ const TUIButton = ({
       onMouseDown={handleMouseDown}
       {...props}
     >
-      {isTUI && !disabled ? `[ ${children} ]` : children}
+      {isTUI && !disabled ? (
+        <>
+          [ {children} ]
+        </>
+      ) : (
+        children
+      )}
     </button>
   )
 }

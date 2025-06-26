@@ -1,5 +1,5 @@
 import { Desktop, GameController, Globe, Robot, Users } from 'phosphor-react'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import TUIButton from './ui/TUIButton'
 import TUIContainer from './ui/TUIContainer'
 import TUIInput from './ui/TUIInput'
@@ -8,6 +8,7 @@ import TUIText from './ui/TUIText'
 function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame, isConnected }) {
   const [playerName, setPlayerName] = useState('')
   const [roomId, setRoomId] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
 
   const handleCreateRoom = () => {
     if (!playerName.trim()) {
@@ -30,6 +31,23 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
       action()
     }
   }
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const userAgent = navigator.userAgent
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+      const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      const isSmallScreen = window.innerWidth <= 768
+      
+      setIsMobile(isMobileUA || (hasTouchScreen && isSmallScreen))
+    }
+
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
 
   return (
     <div className="screen">
@@ -88,39 +106,41 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
 
       <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '15px' }}>
         <TUIContainer title="Local Modes">
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <TUIButton
-            onClick={onStartLocalGame}
-            style={{
-              background: '#9C27B0',
-              color: 'white',
-              flex: '1',
-              minWidth: '140px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Users size={16} />
-            2-Player
-          </TUIButton>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {!isMobile && (
+              <TUIButton
+                onClick={onStartLocalGame}
+                style={{
+                  background: '#9C27B0',
+                  color: 'white',
+                  flex: '1',
+                  minWidth: '140px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Users size={16} />
+                2-Player
+              </TUIButton>
+            )}
 
-          <TUIButton
-            onClick={onStartAIGame}
-            style={{
-              background: '#FF9800',
-              color: 'white',
-              flex: '1',
-              minWidth: '140px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Robot size={16} />
-            vs AI
-          </TUIButton>
-        </div>
+            <TUIButton
+              onClick={onStartAIGame}
+              style={{
+                background: '#FF9800',
+                color: 'white',
+                flex: isMobile ? '1' : '1',
+                minWidth: '140px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Robot size={16} />
+              vs AI
+            </TUIButton>
+          </div>
         </TUIContainer>
       </div>
 
@@ -130,7 +150,7 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
           Online: Create/join rooms (2+ players)
           <br />
           <Desktop size={14} style={{ display: 'inline', marginRight: '4px' }} />
-          Local: WASD+Space | IJKL+Enter (2P) | vs AI
+          {isMobile ? 'Local: vs AI with mobile controls' : 'Local: WASD+Space | IJKL+Enter (2P) | vs AI'}
         </TUIText>
       </TUIContainer>
     </div>
