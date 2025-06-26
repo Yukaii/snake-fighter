@@ -64,7 +64,9 @@ export const ThemeProvider = ({ children }) => {
     for (const [property, value] of Object.entries(styles)) {
       root.style.setProperty(property, value)
     }
-  }, [getThemeStyles])
+    // Set theme attribute on body for conditional styling
+    document.body.setAttribute('data-theme', themeName)
+  }, [getThemeStyles, themeName])
 
   const value = {
     theme: currentTheme,

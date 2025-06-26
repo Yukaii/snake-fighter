@@ -38,7 +38,7 @@ body {
   position: relative;
 }
 
-body::before {
+body[data-theme="default"]::before {
   content: "";
   position: fixed;
   top: 0;
@@ -238,7 +238,7 @@ h2 {
   position: relative;
 }
 
-.lobby-container::before {
+body[data-theme="default"] .lobby-container::before {
   content: "";
   position: absolute;
   top: -2px;
