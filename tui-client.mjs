@@ -6,6 +6,46 @@ import { io } from 'socket.io-client'
 import TextInput from 'ink-text-input'
 import SelectInput from 'ink-select-input'
 
+// Parse command line arguments
+const args = process.argv.slice(2)
+let serverUrl = process.env.SERVER_URL || 'http://localhost:3000'
+let showHelp = false
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i]
+  if (arg === '--help' || arg === '-h') {
+    showHelp = true
+  } else if (arg === '--server' || arg === '-s') {
+    serverUrl = args[i + 1]
+    i++ // Skip next argument as it's the server URL
+  } else if (arg.startsWith('--server=')) {
+    serverUrl = arg.split('=')[1]
+  }
+}
+
+// Display help and exit if requested
+if (showHelp) {
+  console.log(`
+Snake Fighter TUI Client
+
+Usage: node tui-client.mjs [options]
+
+Options:
+  -h, --help              Show this help message
+  -s, --server <url>      Connect to server at specified URL
+                          (default: http://localhost:3000 or SERVER_URL env var)
+
+Examples:
+  node tui-client.mjs                                    # Connect to localhost:3000
+  node tui-client.mjs --server http://example.com:3000  # Connect to remote server
+  node tui-client.mjs -s ws://localhost:8080            # Connect using WebSocket URL
+
+Environment Variables:
+  SERVER_URL              Default server URL if not specified via --server
+`)
+  process.exit(0)
+}
+
 // Game states
 const GAME_STATES = {
   MENU: 'menu',
@@ -110,7 +150,7 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
 
   return h(Box, { flexDirection: "column", padding: 1 }, [
     h(Header, { key: 'header' }),
-    
+
     h(Box, {
       key: 'status',
       borderStyle: "single",
@@ -133,7 +173,7 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
       marginBottom: 1
     }, h(Box, { flexDirection: "column" }, [
       h(Text, { key: 'label', color: COLORS.accent }, 'Player Name:'),
-      currentInput === 'name' 
+      currentInput === 'name'
         ? h(TextInput, {
             key: 'input',
             value: playerName,
@@ -202,7 +242,7 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
 
   return h(Box, { flexDirection: "column", padding: 1 }, [
     h(Header, { key: 'header' }),
-    
+
     h(Box, {
       key: 'room-info',
       borderStyle: "single",
@@ -241,7 +281,7 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
       borderColor: COLORS.border,
       padding: 1
     }, h(Box, { flexDirection: "column" }, [
-      room.host === playerId 
+      room.host === playerId
         ? h(Text, { key: 'host', color: COLORS.primary }, 'You are the host!')
         : h(Text, { key: 'wait', color: COLORS.textSecondary }, 'Waiting for host to start game...'),
       room.host === playerId && h(Text, {
@@ -300,10 +340,10 @@ const GameScreen = ({ gameData, playerId }) => {
     // Draw players
     gameData.players.forEach((player, index) => {
       if (!player.snake || !player.alive) return
-      
+
       const chars = ['●', '○', '◆', '◇', '▲', '△', '■', '□']
       const char = chars[index] || '●'
-      
+
       player.snake.forEach((segment, segIndex) => {
         const x = Math.floor(segment.x / 20)
         const y = Math.floor(segment.y / 20)
@@ -343,7 +383,7 @@ const GameScreen = ({ gameData, playerId }) => {
 
   return h(Box, { flexDirection: "column", padding: 1 }, [
     h(Header, { key: 'header' }),
-    
+
     h(Box, { key: 'game', flexDirection: "row" }, [
       h(Box, {
         key: 'field',
@@ -353,7 +393,7 @@ const GameScreen = ({ gameData, playerId }) => {
         marginRight: 1,
         width: "65%"
       }, h(Text, { fontFamily: "monospace" }, gameDisplay)),
-      
+
       h(Box, { key: 'sidebar', flexDirection: "column", width: "35%" }, [
         h(Box, {
           key: 'score',
@@ -365,7 +405,7 @@ const GameScreen = ({ gameData, playerId }) => {
           h(Text, { key: 'label', color: COLORS.accent }, 'Your Score:'),
           h(Text, { key: 'value', color: COLORS.primary }, (currentPlayer?.score || 0).toString())
         ])),
-        
+
         h(Box, {
           key: 'players',
           borderStyle: "single",
@@ -416,7 +456,7 @@ const GameOverScreen = ({ gameOverData, playerId, onPlayAgain, onReturnToMenu })
 
   return h(Box, { flexDirection: "column", padding: 1, alignItems: "center" }, [
     h(Header, { key: 'header' }),
-    
+
     h(Box, {
       key: 'result',
       borderStyle: "single",
@@ -477,7 +517,6 @@ const SnakeFighterTUI = () => {
 
   // Initialize socket connection
   useEffect(() => {
-    const serverUrl = process.env.SERVER_URL || 'http://localhost:3000'
     const socketInstance = io(serverUrl)
     setSocket(socketInstance)
 
@@ -553,11 +592,11 @@ const SnakeFighterTUI = () => {
     if (key.ctrl && input === 'c') {
       exit()
     }
-    
+
     // Game controls
     if (gameState === GAME_STATES.PLAYING && socket && isConnected) {
       let direction = null
-      
+
       if (key.upArrow || input === 'w') {
         direction = { x: 0, y: -1 }
       } else if (key.downArrow || input === 's') {
@@ -567,7 +606,7 @@ const SnakeFighterTUI = () => {
       } else if (key.rightArrow || input === 'd') {
         direction = { x: 1, y: 0 }
       }
-      
+
       if (direction) {
         socket.emit('player-move', direction)
       }
