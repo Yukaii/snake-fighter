@@ -333,9 +333,14 @@ const GameScreen = ({ gameData, playerId }) => {
       return
     }
 
-    const width = 32
-    const height = 16
-    const grid = Array(height).fill().map(() => Array(width).fill(' '))
+    // Game field dimensions: 640x480 pixels, 20px grid = 32x24 units
+    // Scale for better terminal aspect ratio (terminal chars are ~2:1 ratio)
+    const gameWidth = 32  // 640/20
+    const gameHeight = 24 // 480/20
+    const displayWidth = Math.floor(gameWidth * 2.5)  // Scale wider for terminal
+    const displayHeight = gameHeight // Keep height the same
+
+    const grid = Array(displayHeight).fill().map(() => Array(displayWidth).fill(' '))
 
     // Draw players
     gameData.players.forEach((player, index) => {
@@ -345,9 +350,15 @@ const GameScreen = ({ gameData, playerId }) => {
       const char = chars[index] || '●'
 
       player.snake.forEach((segment, segIndex) => {
-        const x = Math.floor(segment.x / 20)
-        const y = Math.floor(segment.y / 20)
-        if (x >= 0 && x < width && y >= 0 && y < height) {
+        // Convert game coordinates to display coordinates
+        const gameX = Math.floor(segment.x / 20)
+        const gameY = Math.floor(segment.y / 20)
+
+        // Scale coordinates to display grid
+        const x = Math.floor((gameX / gameWidth) * displayWidth)
+        const y = Math.floor((gameY / gameHeight) * displayHeight)
+
+        if (x >= 0 && x < displayWidth && y >= 0 && y < displayHeight) {
           grid[y][x] = segIndex === 0 ? char : '·'
         }
       })
@@ -356,9 +367,13 @@ const GameScreen = ({ gameData, playerId }) => {
     // Draw seeds
     if (gameData.seeds) {
       gameData.seeds.forEach(seed => {
-        const x = Math.floor(seed.x / 20)
-        const y = Math.floor(seed.y / 20)
-        if (x >= 0 && x < width && y >= 0 && y < height) {
+        const gameX = Math.floor(seed.x / 20)
+        const gameY = Math.floor(seed.y / 20)
+
+        const x = Math.floor((gameX / gameWidth) * displayWidth)
+        const y = Math.floor((gameY / gameHeight) * displayHeight)
+
+        if (x >= 0 && x < displayWidth && y >= 0 && y < displayHeight) {
           grid[y][x] = '@'
         }
       })
@@ -367,9 +382,13 @@ const GameScreen = ({ gameData, playerId }) => {
     // Draw obstacles
     if (gameData.obstacles) {
       gameData.obstacles.forEach(obstacle => {
-        const x = Math.floor(obstacle.x / 20)
-        const y = Math.floor(obstacle.y / 20)
-        if (x >= 0 && x < width && y >= 0 && y < height) {
+        const gameX = Math.floor(obstacle.x / 20)
+        const gameY = Math.floor(obstacle.y / 20)
+
+        const x = Math.floor((gameX / gameWidth) * displayWidth)
+        const y = Math.floor((gameY / gameHeight) * displayHeight)
+
+        if (x >= 0 && x < displayWidth && y >= 0 && y < displayHeight) {
           grid[y][x] = '#'
         }
       })
@@ -377,7 +396,7 @@ const GameScreen = ({ gameData, playerId }) => {
 
     // Add border to the game display
     const gridLines = grid.map(row => row.join(''))
-    const topBottom = '─'.repeat(width + 2)
+    const topBottom = '─'.repeat(displayWidth)
     const borderedLines = [
       '┌' + topBottom + '┐',
       ...gridLines.map(line => '│' + line + '│'),
