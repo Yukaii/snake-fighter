@@ -8,6 +8,7 @@ A real-time multiplayer Snake game built with React frontend and Node.js WebSock
 - **WebSocket Communication** - Low-latency game updates using Socket.IO
 - **Room System** - Create and join game rooms with unique codes
 - **React Frontend** - Modern, responsive user interface
+- **TUI Client** - Terminal User Interface client built with Ink
 - **Single Service Architecture** - Caddy handles both static assets and WebSocket proxying
 
 ## Game Features
@@ -21,11 +22,23 @@ A real-time multiplayer Snake game built with React frontend and Node.js WebSock
 
 ## Usage
 
+### Web Client
+
 Players can:
 - Create new game rooms or join existing ones with room codes
 - Battle up to 7 other players in real-time
 - Use arrow keys or WASD to control their snake
 - Compete for the highest score and longest survival time
+
+### TUI Client
+
+A terminal-based client that provides the same multiplayer experience:
+- Run with `npm run tui` to start the TUI client
+- Connect to the same game server as the web client
+- ASCII art representation of the game field
+- Full keyboard controls (WASD/arrows, Enter/Escape)
+- Terminal-friendly color scheme
+- All game modes: create room, join room, local game
 
 ## Development
 
@@ -35,6 +48,7 @@ Players can:
 - `npm run build` - Build client with Vite
 - `npm run start` - Start production server
 - `npm run client` - Start Vite dev server only
+- `npm run tui` - Start TUI (Terminal) client
 - `npm run lint` - Run Biome linter
 - `npm run format` - Check formatting with Biome
 - `npm run check` - Run all Biome checks (lint + format)
