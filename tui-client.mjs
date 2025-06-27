@@ -459,6 +459,7 @@ const GameScreen = ({ gameData, playerId }) => {
         }, h(Box, { flexDirection: "column" }, [
           h(Text, { key: 'label', color: COLORS.textSecondary }, 'Controls:'),
           h(Text, { key: 'wasd', color: COLORS.textSecondary }, 'WASD/Arrows'),
+          h(Text, { key: 'space', color: COLORS.textSecondary }, 'SPACE: obstacle'),
           h(Text, { key: 'esc', color: COLORS.textSecondary }, 'ESC to quit')
         ]))
       ])
@@ -636,6 +637,11 @@ const SnakeFighterTUI = () => {
 
       if (direction) {
         socket.emit('player-direction', direction)
+      }
+
+      // Obstacle placement
+      if (input === ' ') {
+        socket.emit('place-obstacle')
       }
     }
 
