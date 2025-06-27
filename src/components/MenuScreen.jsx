@@ -36,16 +36,18 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
   useEffect(() => {
     const checkIsMobile = () => {
       const userAgent = navigator.userAgent
-      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        userAgent
+      )
       const hasTouchScreen = 'ontouchstart' in window || navigator.maxTouchPoints > 0
       const isSmallScreen = window.innerWidth <= 768
-      
+
       setIsMobile(isMobileUA || (hasTouchScreen && isSmallScreen))
     }
 
     checkIsMobile()
     window.addEventListener('resize', checkIsMobile)
-    
+
     return () => window.removeEventListener('resize', checkIsMobile)
   }, [])
 
@@ -150,7 +152,9 @@ function MenuScreen({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
           Online: Create/join rooms (2+ players)
           <br />
           <Desktop size={14} style={{ display: 'inline', marginRight: '4px' }} />
-          {isMobile ? 'Local: vs AI with mobile controls' : 'Local: WASD+Space | IJKL+Enter (2P) | vs AI'}
+          {isMobile
+            ? 'Local: vs AI with mobile controls'
+            : 'Local: WASD+Space | IJKL+Enter (2P) | vs AI'}
         </TUIText>
       </TUIContainer>
     </div>

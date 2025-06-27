@@ -223,7 +223,9 @@ function GameScreen({ gameData, playerId, socket, isConnected }) {
           <p>WASD/Arrows: Move • Seeds: Grow • SPACE: Place obstacle (15s cooldown)</p>
           {showMobileControls && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px' }}>
-              <label htmlFor="control-type-select" style={{ fontSize: '14px' }}>Control Type:</label>
+              <label htmlFor="control-type-select" style={{ fontSize: '14px' }}>
+                Control Type:
+              </label>
               <select
                 id="control-type-select"
                 value={controlType}

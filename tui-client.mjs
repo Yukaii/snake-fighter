@@ -46,14 +46,22 @@ Environment Variables:
   process.exit(0)
 }
 
+// Import LocalGame logic
+// Note: Adjust path if your project structure is different or if you use a bundler for the TUI client
+const LocalGame = require('./src/lib/localGameLogic.js')
+
+
 // Game states
 const GAME_STATES = {
   MENU: 'menu',
   LOBBY: 'lobby',
-  COUNTDOWN: 'countdown',
-  PLAYING: 'playing',
-  GAME_OVER: 'gameOver',
-  LOCAL_GAME: 'localGame',
+  COUNTDOWN: 'countdown', // Online game countdown
+  PLAYING: 'playing', // Online game playing
+  GAME_OVER: 'gameOver', // Online game gameover
+  LOCAL_GAME: 'localGame', // Placeholder, not fully implemented as per user request
+  AI_GAME_COUNTDOWN: 'aiGameCountdown',
+  AI_GAME_PLAYING: 'aiGamePlaying',
+  AI_GAME_OVER: 'aiGameOver',
 }
 
 // TUI Theme colors
@@ -66,7 +74,18 @@ const COLORS = {
   text: '#00ff00',
   textSecondary: '#ffffff',
   border: '#00ff00',
+  aiColor: '#4ECDC4', // Color for AI snake
+  playerColor: '#FF6B6B', // Color for human player
 }
+
+// Game Config for TUI (simplified)
+const TUI_GAME_CONFIG = {
+  GAME_WIDTH_CHARS: 64, // Roughly (640px / 20px_grid_size) * 2 for char aspect ratio
+  GAME_HEIGHT_CHARS: 24, // Roughly 480px / 20px_grid_size
+  GAME_SPEED_MS: 150, // milliseconds per game tick
+  SEED_SPAWN_INTERVAL_MS: 4000,
+};
+
 
 // Helper to create elements with JSX-like syntax
 const h = React.createElement
@@ -83,10 +102,10 @@ const Header = () => h(Box, {
 }, '🐍 SNAKE FIGHTER - TUI CLIENT 🐍'))
 
 // Menu Screen Component
-const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected }) => {
+const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame, isConnected }) => {
   const [playerName, setPlayerName] = useState('')
   const [roomId, setRoomId] = useState('')
-  const [currentInput, setCurrentInput] = useState('name')
+  const [currentInput, setCurrentInput] = useState('name') // 'name', 'action', 'roomId'
 
   useInput((input, key) => {
     if (key.return) {
@@ -97,50 +116,32 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
       }
     }
     if (key.escape) {
-      setCurrentInput('name')
+      if (currentInput === 'roomId') setCurrentInput('action');
+      else if (currentInput === 'action') setCurrentInput('name');
     }
   })
 
   const menuItems = [
-    {
-      label: '🌐 Create Online Room',
-      value: 'create',
-      disabled: !isConnected || !playerName.trim(),
-    },
-    {
-      label: '🏠 Join Room',
-      value: 'join',
-      disabled: !isConnected || !playerName.trim(),
-    },
-    {
-      label: '🖥️  Local Game',
-      value: 'local',
-      disabled: !playerName.trim(),
-    },
-    {
-      label: '🤖 AI Game',
-      value: 'ai',
-      disabled: !playerName.trim(),
-    },
-    {
-      label: '❌ Exit',
-      value: 'exit',
-    },
+    { label: '🌐 Create Online Room', value: 'create', disabled: !isConnected || !playerName.trim() },
+    { label: '🏠 Join Room', value: 'join', disabled: !isConnected || !playerName.trim() },
+    // { label: '🖥️  Local Game (2P - Not Implemented)', value: 'local', disabled: true || !playerName.trim() },
+    { label: '🤖 Play Local AI Game', value: 'ai', disabled: !playerName.trim() },
+    { label: '❌ Exit', value: 'exit' },
   ]
 
   const handleSelect = (item) => {
     switch (item.value) {
       case 'create':
-        onCreateRoom(playerName.trim())
+        if (playerName.trim()) onCreateRoom(playerName.trim());
         break
       case 'join':
-        setCurrentInput('roomId')
+        if (playerName.trim()) setCurrentInput('roomId');
         break
-      case 'local':
-        onStartLocalGame()
-        break
+      // case 'local': // Local 2P not implemented
+      //   if (playerName.trim()) onStartLocalGame(playerName.trim());
+      //   break
       case 'ai':
-        // TODO: Implement AI game
+        if (playerName.trim()) onStartAIGame(playerName.trim());
         break
       case 'exit':
         process.exit(0)
@@ -150,86 +151,39 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
 
   return h(Box, { flexDirection: "column", padding: 1 }, [
     h(Header, { key: 'header' }),
-
-    h(Box, {
-      key: 'status',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1,
-      marginBottom: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, { key: 'label', color: COLORS.accent }, 'Connection Status: '),
-      h(Text, {
-        key: 'status',
-        color: isConnected ? COLORS.primary : COLORS.danger
-      }, isConnected ? '✅ Connected' : '❌ Disconnected')
-    ])),
-
-    h(Box, {
-      key: 'name',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1,
-      marginBottom: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, { key: 'label', color: COLORS.accent }, 'Player Name:'),
-      currentInput === 'name'
-        ? h(TextInput, {
-            key: 'input',
-            value: playerName,
-            onChange: setPlayerName,
-            placeholder: "Enter your name..."
-          })
-        : h(Text, { key: 'display', color: COLORS.text }, playerName || '(not set)'),
-      currentInput === 'name' && h(Text, {
-        key: 'help',
-        color: COLORS.textSecondary,
-        dimColor: true
-      }, 'Press Enter to continue')
-    ])),
-
-    currentInput === 'roomId' && h(Box, {
-      key: 'roomId',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1,
-      marginBottom: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, { key: 'label', color: COLORS.accent }, 'Room ID:'),
-      h(TextInput, {
-        key: 'input',
-        value: roomId,
-        onChange: setRoomId,
-        placeholder: "Enter room ID..."
-      }),
-      h(Text, {
-        key: 'help',
-        color: COLORS.textSecondary,
-        dimColor: true
-      }, 'Press Enter to join, Escape to cancel')
-    ])),
-
-    currentInput === 'action' && h(Box, {
-      key: 'menu',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, {
-        key: 'label',
-        color: COLORS.accent,
-        marginBottom: 1
-      }, 'Choose an option:'),
-      h(SelectInput, {
-        key: 'select',
-        items: menuItems,
-        onSelect: handleSelect
-      })
-    ]))
+    h(Box, { key: 'statusBox', borderStyle: "single", borderColor: COLORS.border, padding:1, marginBottom:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'statusLabel', color: COLORS.accent }, 'Connection Status: '),
+        h(Text, { key: 'statusValue', color: isConnected ? COLORS.primary : COLORS.danger }, isConnected ? '✅ Connected' : '❌ Disconnected (Online modes unavailable)')
+      ])
+    ),
+    h(Box, { key: 'nameBox', borderStyle: "single", borderColor: COLORS.border, padding:1, marginBottom:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'nameLabel', color: COLORS.accent }, 'Player Name:'),
+        currentInput === 'name'
+          ? h(TextInput, { key: 'nameInput', value: playerName, onChange: setPlayerName, placeholder: "Enter your name..." })
+          : h(Text, { key: 'nameDisplay', color: COLORS.text }, playerName || '(not set)'),
+        currentInput === 'name' && h(Text, { key: 'nameHelp', color: COLORS.textSecondary, dimColor: true }, 'Press Enter to continue')
+      ])
+    ),
+    currentInput === 'roomId' && h(Box, { key: 'roomIdBox', borderStyle: "single", borderColor: COLORS.border, padding:1, marginBottom:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'roomIdLabel', color: COLORS.accent }, 'Room ID:'),
+        h(TextInput, { key: 'roomIdInput', value: roomId, onChange: setRoomId, placeholder: "Enter room ID..." }),
+        h(Text, { key: 'roomIdHelp', color: COLORS.textSecondary, dimColor: true }, 'Press Enter to join, Escape to cancel')
+      ])
+    ),
+    currentInput === 'action' && h(Box, { key: 'menuBox', borderStyle: "single", borderColor: COLORS.border, padding:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'menuLabel', color: COLORS.accent, marginBottom:1 }, 'Choose an option:'),
+        h(SelectInput, { key: 'menuSelect', items: menuItems, onSelect: handleSelect })
+      ])
+    )
   ])
 }
 
-// Lobby Screen Component
+
+// Lobby Screen Component (Online Play)
 const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
   useInput((input, key) => {
     if (key.return && room.host === playerId) {

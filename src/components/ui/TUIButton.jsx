@@ -111,13 +111,7 @@ const TUIButton = ({
       onMouseDown={handleMouseDown}
       {...props}
     >
-      {isTUI && !disabled ? (
-        <>
-          [ {children} ]
-        </>
-      ) : (
-        children
-      )}
+      {isTUI && !disabled ? <>[ {children} ]</> : children}
     </button>
   )
 }
