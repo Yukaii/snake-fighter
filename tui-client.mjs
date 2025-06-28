@@ -185,7 +185,7 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame,
 // Lobby Screen Component (Online Play)
 const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
   useInput((input, key) => {
-    if (key.return && room.host === playerId) {
+    if (key.return && room.hostId === playerId) {
       onStartGame()
     }
     if (key.escape) {
@@ -225,7 +225,7 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
       ...room.players.map((player, index) => h(Text, {
         key: player.id,
         color: COLORS.text
-      }, `${index + 1}. ${player.name} ${player.id === room.host ? '👑' : ''} ${player.id === playerId ? '(You)' : ''}`))
+      }, `${index + 1}. ${player.name} ${player.id === room.hostId ? '👑' : ''} ${player.id === playerId ? '(You)' : ''}`))
     ])),
 
     h(Box, {
@@ -234,10 +234,10 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
       borderColor: COLORS.border,
       padding: 1
     }, h(Box, { flexDirection: "column" }, [
-      room.host === playerId
+      room.hostId === playerId
         ? h(Text, { key: 'host', color: COLORS.primary }, 'You are the host!')
         : h(Text, { key: 'wait', color: COLORS.textSecondary }, 'Waiting for host to start game...'),
-      room.host === playerId && h(Text, {
+      room.hostId === playerId && h(Text, {
         key: 'start',
         color: COLORS.textSecondary
       }, 'Press Enter to start game'),
