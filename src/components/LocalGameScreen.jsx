@@ -1,59 +1,164 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
+import LocalGame from '../lib/localGameLogic' // Import the new game logic
 import MobileController from './ui/MobileController'
 
-const GAME_CONFIG = {
+// Default game config, can be overridden by LocalGame instance if needed
+const GAME_CONFIG_DEFAULTS = {
   CANVAS_WIDTH: 640,
   CANVAS_HEIGHT: 480,
   GRID_SIZE: 20,
-  MAX_SNAKE_LENGTH: 15,
-  GAME_SPEED: 150,
-  MAX_SEEDS: 5,
-  SEED_SPAWN_INTERVAL: 4000,
-  OBSTACLE_PLACEMENT_COOLDOWN: 15000,
+  GAME_SPEED: 150, // Interval for game loop
+  SEED_SPAWN_INTERVAL: 4000, // Interval for trying to spawn seeds
 }
+
+// Custom hook for game initialization
+const useGameInitialization = (isAIMode, gameInstanceRef, setGameRenderData, setUiGameState) => {
+  return useCallback(() => {
+    if (!gameInstanceRef.current) {
+      gameInstanceRef.current = new LocalGame(
+        {
+          CANVAS_WIDTH: GAME_CONFIG_DEFAULTS.CANVAS_WIDTH,
+          CANVAS_HEIGHT: GAME_CONFIG_DEFAULTS.CANVAS_HEIGHT,
+          GRID_SIZE: GAME_CONFIG_DEFAULTS.GRID_SIZE,
+        },
+        isAIMode
+      )
+    } else {
+      gameInstanceRef.current.reset()
+    }
+    setGameRenderData(gameInstanceRef.current.getGameState())
+    setUiGameState(gameInstanceRef.current.gameState)
+  }, [isAIMode, gameInstanceRef, setGameRenderData, setUiGameState])
+}
+
+// Custom hook for mobile detection
+const useMobileDetection = () => {
+  const [showMobileControls, setShowMobileControls] = useState(false)
+
+  useEffect(() => {
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0
+    setShowMobileControls(isMobile)
+  }, [])
+
+  return showMobileControls
+}
+
+// Custom hook for countdown effect
+const useCountdownEffect = (uiGameState, gameInstanceRef, setGameRenderData, setUiGameState) => {
+  useEffect(() => {
+    if (uiGameState === 'countdown' && gameInstanceRef.current) {
+      const interval = setInterval(() => {
+        const gameStarted = gameInstanceRef.current.tickCountdown()
+        const currentData = gameInstanceRef.current.getGameState()
+        setGameRenderData(currentData)
+        if (gameStarted) {
+          setUiGameState('playing')
+        }
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [uiGameState, gameInstanceRef, setGameRenderData, setUiGameState])
+}
+
+// Custom hook for game loop and seed spawning
+const useGameLoop = (
+  uiGameState,
+  gameInstanceRef,
+  gameLoop,
+  gameLoopIntervalRef,
+  seedSpawnIntervalRef
+) => {
+  useEffect(() => {
+    if (uiGameState === 'playing' && gameInstanceRef.current) {
+      gameLoopIntervalRef.current = setInterval(gameLoop, GAME_CONFIG_DEFAULTS.GAME_SPEED)
+
+      seedSpawnIntervalRef.current = setInterval(() => {
+        if (gameInstanceRef.current && gameInstanceRef.current.gameState === 'playing') {
+          gameInstanceRef.current.spawnSeed()
+        }
+      }, GAME_CONFIG_DEFAULTS.SEED_SPAWN_INTERVAL)
+
+      return () => {
+        if (gameLoopIntervalRef.current) clearInterval(gameLoopIntervalRef.current)
+        if (seedSpawnIntervalRef.current) clearInterval(seedSpawnIntervalRef.current)
+      }
+    }
+  }, [uiGameState, gameLoop, gameInstanceRef, gameLoopIntervalRef, seedSpawnIntervalRef])
+}
+
+// Component for mobile controls
+const MobileControls = ({ showMobileControls, handleMobileDirection, handleMobileObstacle }) => {
+  if (!showMobileControls) return null
+
+  return (
+    <div className="mobile-controls">
+      <MobileController
+        onArrowPress={handleMobileDirection}
+        onObstaclePlace={handleMobileObstacle}
+        disabled={false}
+      />
+    </div>
+  )
+}
+
+// Component for game info display
+const GameInfo = ({ player1, player2, gameInstanceRef, isAIMode }) => (
+  <div className="game-info" style={{ display: 'flex', justifyContent: 'space-between' }}>
+    <div>
+      <div>
+        <strong>{player1.name}:</strong> {player1.score} {player1.alive ? '🐍' : '💀'}
+      </div>
+      {gameInstanceRef.current && (
+        <div>Obstacle: {gameInstanceRef.current.canPlaceObstacle(1) ? '✅' : '⏳'}</div>
+      )}
+    </div>
+    <div style={{ textAlign: 'right' }}>
+      <div>
+        <strong>{player2.name}:</strong> {player2.score} {player2.alive ? '🐍' : '💀'}
+      </div>
+      {gameInstanceRef.current && !isAIMode && (
+        <div>Obstacle: {gameInstanceRef.current.canPlaceObstacle(2) ? '✅' : '⏳'}</div>
+      )}
+      {gameInstanceRef.current && isAIMode && (
+        <div>AI Obstacle: {gameInstanceRef.current.canPlaceObstacle(2) ? '✅' : '⏳'}</div>
+      )}
+    </div>
+  </div>
+)
 
 function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
   const canvasRef = useRef(null)
-  const gameLoopRef = useRef(null)
-  const seedSpawnRef = useRef(null)
-  const currentSeedsRef = useRef([])
-  const player1Ref = useRef(null)
-  const player2Ref = useRef(null)
-  const obstaclesRef = useRef([])
+  const gameInstanceRef = useRef(null)
+  const gameLoopIntervalRef = useRef(null)
+  const seedSpawnIntervalRef = useRef(null)
 
-  const [gameState, setGameState] = useState('countdown') // countdown, playing, gameOver
-  const [countdown, setCountdown] = useState(3)
-
-  const [player1, setPlayer1] = useState({
-    name: 'Player 1',
-    color: '#FF6B6B',
-    snake: [{ x: 100, y: 100 }],
-    direction: { x: 1, y: 0 },
-    nextDirection: { x: 1, y: 0 },
-    alive: true,
-    score: 0,
-    lastObstaclePlacement: 0,
-  })
-
-  const [player2, setPlayer2] = useState({
-    name: isAIMode ? 'AI' : 'Player 2',
-    color: '#4ECDC4',
-    snake: [{ x: 600, y: 400 }],
-    direction: { x: -1, y: 0 },
-    nextDirection: { x: -1, y: 0 },
-    alive: true,
-    score: 0,
-    lastObstaclePlacement: 0,
-    isAI: isAIMode,
-  })
-
-  const [obstacles, setObstacles] = useState([])
-  const [seeds, setSeeds] = useState([])
-  const [gameOverData, setGameOverData] = useState(null)
+  const [uiGameState, setUiGameState] = useState('countdown')
+  const [gameRenderData, setGameRenderData] = useState(null)
   const [controlType, setControlType] = useState('arrows')
-  const [showMobileControls, setShowMobileControls] = useState(false)
 
-  const lightenColor = (color, percent) => {
+  const showMobileControls = useMobileDetection()
+
+  const initializeGame = useGameInitialization(
+    isAIMode,
+    gameInstanceRef,
+    setGameRenderData,
+    setUiGameState
+  )
+
+  useEffect(() => {
+    initializeGame()
+
+    // Cleanup intervals when component unmounts
+    return () => {
+      if (gameLoopIntervalRef.current) clearInterval(gameLoopIntervalRef.current)
+      if (seedSpawnIntervalRef.current) clearInterval(seedSpawnIntervalRef.current)
+    }
+  }, [initializeGame])
+
+  const lightenColor = useCallback((color, percent) => {
     const num = Number.parseInt(color.replace('#', ''), 16)
     const amt = Math.round(2.55 * percent * 100)
     const R = (num >> 16) + amt
@@ -67,745 +172,233 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     )
       .toString(16)
       .slice(1)}`
-  }
-
-  const isPositionFree = (
-    x,
-    y,
-    excludeSnakes = false,
-    currentObstacles = obstacles,
-    currentSeeds = seeds,
-    currentPlayer1 = player1,
-    currentPlayer2 = player2
-  ) => {
-    // Check obstacles
-    if (currentObstacles?.some((obstacle) => obstacle.x === x && obstacle.y === y)) {
-      return false
-    }
-
-    // Check seeds
-    if (currentSeeds?.some((seed) => seed.x === x && seed.y === y)) {
-      return false
-    }
-
-    if (!excludeSnakes) {
-      // Check both snakes
-      if (
-        currentPlayer1?.alive &&
-        currentPlayer1.snake &&
-        currentPlayer1.snake.some((segment) => segment.x === x && segment.y === y)
-      ) {
-        return false
-      }
-      if (
-        currentPlayer2?.alive &&
-        currentPlayer2.snake &&
-        currentPlayer2.snake.some((segment) => segment.x === x && segment.y === y)
-      ) {
-        return false
-      }
-    }
-
-    return true
-  }
-
-  const spawnSeed = () => {
-    if (seeds.length >= GAME_CONFIG.MAX_SEEDS) return
-
-    let attempts = 0
-    const maxAttempts = 100
-
-    while (attempts < maxAttempts) {
-      const x =
-        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.GRID_SIZE)) *
-        GAME_CONFIG.GRID_SIZE
-      const y =
-        Math.floor(Math.random() * (GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.GRID_SIZE)) *
-        GAME_CONFIG.GRID_SIZE
-
-      if (isPositionFree(x, y)) {
-        setSeeds((prev) => [...prev, { x, y }])
-        break
-      }
-      attempts++
-    }
-  }
-
-  const canPlaceObstacle = (player) => {
-    if (!player.alive || player.snake.length <= 1) return false
-    const now = Date.now()
-    return now - player.lastObstaclePlacement >= GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN
-  }
-
-  const placeObstacle = useCallback((playerNum) => {
-    const setPlayer = playerNum === 1 ? setPlayer1 : setPlayer2
-
-    setPlayer((prev) => {
-      // Check if we can place obstacle using current state
-      if (!prev.alive || prev.snake.length <= 1) return prev
-      
-      const now = Date.now()
-      if (now - prev.lastObstaclePlacement < GAME_CONFIG.OBSTACLE_PLACEMENT_COOLDOWN) return prev
-
-      const newSnake = [...prev.snake]
-      const tail = newSnake.pop()
-
-      if (tail) {
-        setObstacles((prevObstacles) => [
-          ...prevObstacles,
-          {
-            x: tail.x,
-            y: tail.y,
-            type: 'dotted',
-            placedBy: playerNum,
-          },
-        ])
-      }
-
-      return {
-        ...prev,
-        snake: newSnake,
-        score: Math.max(0, newSnake.length - 1),
-        lastObstaclePlacement: now,
-      }
-    })
-  }, [])
-
-  const calculateAIDirection = (aiPlayer, humanPlayer, currentSeeds, currentObstacles) => {
-    if (!aiPlayer.alive) return aiPlayer.direction
-
-    const head = aiPlayer.snake[0]
-    const possibleDirections = [
-      { x: 0, y: -1 }, // up
-      { x: 0, y: 1 }, // down
-      { x: -1, y: 0 }, // left
-      { x: 1, y: 0 }, // right
-    ]
-
-    // Filter out 180-degree turns
-    const validDirections = possibleDirections.filter((dir) => {
-      return !(dir.x === -aiPlayer.direction.x && dir.y === -aiPlayer.direction.y)
-    })
-
-    // Helper function to check if position is safe
-    const isPositionSafe = (pos, lookahead = 0) => {
-      // Check walls
-      if (
-        pos.x < 0 ||
-        pos.x >= GAME_CONFIG.CANVAS_WIDTH ||
-        pos.y < 0 ||
-        pos.y >= GAME_CONFIG.CANVAS_HEIGHT
-      ) {
-        return false
-      }
-
-      // Check obstacles
-      if (currentObstacles.some((obs) => obs.x === pos.x && obs.y === pos.y)) {
-        return false
-      }
-
-      // Check self collision
-      if (aiPlayer.snake.some((segment) => segment.x === pos.x && segment.y === pos.y)) {
-        return false
-      }
-
-      // Check human player collision
-      if (
-        humanPlayer?.alive &&
-        humanPlayer.snake.some((segment) => segment.x === pos.x && segment.y === pos.y)
-      ) {
-        return false
-      }
-
-      return true
-    }
-
-    // Calculate available space from a position using flood fill
-    const getNeighbors = (pos) => [
-      { x: pos.x, y: pos.y - GAME_CONFIG.GRID_SIZE },
-      { x: pos.x, y: pos.y + GAME_CONFIG.GRID_SIZE },
-      { x: pos.x - GAME_CONFIG.GRID_SIZE, y: pos.y },
-      { x: pos.x + GAME_CONFIG.GRID_SIZE, y: pos.y },
-    ]
-
-    const addUnvisitedNeighbors = (pos, queue, visited) => {
-      const neighbors = getNeighbors(pos)
-      for (const neighbor of neighbors) {
-        const neighborKey = `${neighbor.x},${neighbor.y}`
-        if (!visited.has(neighborKey)) {
-          queue.push(neighbor)
-        }
-      }
-    }
-
-    const calculateAvailableSpace = (startPos) => {
-      const visited = new Set()
-      const queue = [startPos]
-      let spaceCount = 0
-
-      while (queue.length > 0 && spaceCount < 50) {
-        const pos = queue.shift()
-        const key = `${pos.x},${pos.y}`
-
-        if (visited.has(key)) continue
-        visited.add(key)
-
-        if (!isPositionSafe(pos)) continue
-
-        spaceCount++
-        addUnvisitedNeighbors(pos, queue, visited)
-      }
-
-      return spaceCount
-    }
-
-    // Calculate safety score for each direction
-    const directionScores = validDirections.map((direction) => {
-      const nextHead = {
-        x: head.x + direction.x * GAME_CONFIG.GRID_SIZE,
-        y: head.y + direction.y * GAME_CONFIG.GRID_SIZE,
-      }
-
-      let score = 0
-
-      // Immediate safety check - if move is lethal, heavily penalize
-      if (!isPositionSafe(nextHead)) {
-        score -= 10000
-      } else {
-        // Reward safe moves
-        score += 100
-
-        // Calculate available space from this position
-        const availableSpace = calculateAvailableSpace(nextHead)
-        score += availableSpace * 10 // More space = better score
-
-        // Look ahead multiple moves for danger
-        let currentPos = nextHead
-        for (let lookahead = 1; lookahead <= 5; lookahead++) {
-          const futureHead = {
-            x: currentPos.x + direction.x * GAME_CONFIG.GRID_SIZE,
-            y: currentPos.y + direction.y * GAME_CONFIG.GRID_SIZE,
-          }
-
-          if (!isPositionSafe(futureHead)) {
-            score -= 200 / lookahead // Penalize future danger
-            break
-          }
-
-          // Penalize getting too close to walls
-          const wallDistance = Math.min(
-            futureHead.x,
-            GAME_CONFIG.CANVAS_WIDTH - futureHead.x - GAME_CONFIG.GRID_SIZE,
-            futureHead.y,
-            GAME_CONFIG.CANVAS_HEIGHT - futureHead.y - GAME_CONFIG.GRID_SIZE
-          )
-
-          if (wallDistance < GAME_CONFIG.GRID_SIZE * 2) {
-            score -= (20 - wallDistance) / lookahead
-          }
-
-          currentPos = futureHead
-        }
-
-        // Seek nearest seed, but only if it's safe to do so
-        if (currentSeeds.length > 0) {
-          const nearestSeed = currentSeeds.reduce((nearest, seed) => {
-            const distToSeed = Math.abs(seed.x - nextHead.x) + Math.abs(seed.y - nextHead.y)
-            const distToNearest =
-              Math.abs(nearest.x - nextHead.x) + Math.abs(nearest.y - nextHead.y)
-            return distToSeed < distToNearest ? seed : nearest
-          })
-
-          const distanceToSeed =
-            Math.abs(nearestSeed.x - nextHead.x) + Math.abs(nearestSeed.y - nextHead.y)
-          // Only seek seeds if we have enough space
-          if (availableSpace > 10) {
-            score += Math.max(0, 100 - distanceToSeed * 0.5)
-          }
-        }
-
-        // Add slight randomness for unpredictability
-        score += Math.random() * 5
-      }
-
-      return { direction, score }
-    })
-
-    // Sort by score and pick the best safe option
-    directionScores.sort((a, b) => b.score - a.score)
-
-    // Always choose the safest available move, even if it's not optimal for food
-    for (const option of directionScores) {
-      if (option.score > -5000) {
-        // Only avoid moves that are immediately lethal
-        return option.direction
-      }
-    }
-
-    // If all moves are bad, try to find the least bad one
-    return directionScores[0].direction
-  }
-
-  const checkCollisionForPlayer = (player, otherPlayer, currentObstacles) => {
-    if (!player.alive || !player.snake || player.snake.length === 0) return false
-
-    const head = player.snake[0]
-
-    // Check wall collisions
-    if (
-      head.x < 0 ||
-      head.x >= GAME_CONFIG.CANVAS_WIDTH ||
-      head.y < 0 ||
-      head.y >= GAME_CONFIG.CANVAS_HEIGHT
-    ) {
-      return true
-    }
-
-    // Check obstacle collisions
-    if (currentObstacles.some((obstacle) => obstacle.x === head.x && obstacle.y === head.y)) {
-      return true
-    }
-
-    // Check self collision
-    for (let i = 1; i < player.snake.length; i++) {
-      if (head.x === player.snake[i].x && head.y === player.snake[i].y) {
-        return true
-      }
-    }
-
-    // Check collision with other player
-    if (otherPlayer?.alive && otherPlayer.snake) {
-      if (otherPlayer.snake.some((segment) => segment.x === head.x && segment.y === head.y)) {
-        return true
-      }
-    }
-
-    return false
-  }
+  }, []) // No dependencies, it's a pure function of its inputs
 
   const gameLoop = useCallback(() => {
-    if (gameState !== 'playing') return
-
-    // Get current state from refs
-    const currentSeeds = currentSeedsRef.current
-    const currentPlayer1 = player1Ref.current
-    const currentPlayer2 = player2Ref.current
-    const currentObstacles = obstaclesRef.current
-
-    if (!currentPlayer1 || !currentPlayer2) return
-
-    const seedsEatenThisTurn = []
-
-    // Update AI direction if player 2 is AI - apply immediately for this frame
-    let updatedPlayer2 = currentPlayer2
-    if (isAIMode && currentPlayer2.alive) {
-      const aiDirection = calculateAIDirection(
-        currentPlayer2,
-        currentPlayer1,
-        currentSeeds,
-        currentObstacles
-      )
-      updatedPlayer2 = { ...currentPlayer2, direction: aiDirection, nextDirection: aiDirection }
-
-      // AI occasionally places obstacles strategically
-      if (canPlaceObstacle(currentPlayer2) && Math.random() < 0.1) {
-        // Reduced to 10% chance
-        const humanHead = currentPlayer1.snake[0]
-        const aiTail = currentPlayer2.snake[currentPlayer2.snake.length - 1]
-
-        // Place obstacle if it might block human player's path
-        const distanceToHuman = Math.abs(aiTail.x - humanHead.x) + Math.abs(aiTail.y - humanHead.y)
-        if (distanceToHuman < 200 && currentPlayer2.snake.length > 3) {
-          placeObstacle(2)
-        }
-      }
+    if (!gameInstanceRef.current || gameInstanceRef.current.gameState !== 'playing') {
+      return
     }
 
-    // Calculate new positions for both players
-    let newPlayer1 = null
-    let newPlayer2 = null
+    gameInstanceRef.current.update()
+    const newGameData = gameInstanceRef.current.getGameState()
+    setGameRenderData(newGameData) // Update UI with new state
 
-    // Move Player 1
-    if (currentPlayer1.alive) {
-      const head1 = { ...currentPlayer1.snake[0] }
-      head1.x += currentPlayer1.direction.x * GAME_CONFIG.GRID_SIZE
-      head1.y += currentPlayer1.direction.y * GAME_CONFIG.GRID_SIZE
-
-      const newSnake1 = [head1, ...currentPlayer1.snake]
-
-      // Check if player 1 ate a seed
-      const eatenSeedIndex1 = currentSeeds.findIndex(
-        (seed) => seed.x === head1.x && seed.y === head1.y
-      )
-
-      if (eatenSeedIndex1 !== -1) {
-        seedsEatenThisTurn.push(eatenSeedIndex1)
-      } else {
-        // Normal movement - remove tail
-        if (newSnake1.length > GAME_CONFIG.MAX_SNAKE_LENGTH) {
-          newSnake1.pop()
-        } else if (newSnake1.length > 1) {
-          newSnake1.pop()
-        }
-      }
-
-      newPlayer1 = {
-        ...currentPlayer1,
-        snake: newSnake1,
-        direction: { ...currentPlayer1.nextDirection },
-        score: Math.max(0, newSnake1.length - 1),
-      }
+    if (newGameData.gameState === 'gameOver') {
+      setUiGameState('gameOver')
+      if (gameLoopIntervalRef.current) clearInterval(gameLoopIntervalRef.current)
+      if (seedSpawnIntervalRef.current) clearInterval(seedSpawnIntervalRef.current)
     }
+  }, [])
 
-    // Move Player 2
-    if (updatedPlayer2.alive) {
-      const head2 = { ...updatedPlayer2.snake[0] }
-      head2.x += updatedPlayer2.direction.x * GAME_CONFIG.GRID_SIZE
-      head2.y += updatedPlayer2.direction.y * GAME_CONFIG.GRID_SIZE
+  const getDirectionFromKey = useCallback((key) => {
+    const directions = {
+      w: { x: 0, y: -1 },
+      s: { x: 0, y: 1 },
+      a: { x: -1, y: 0 },
+      d: { x: 1, y: 0 },
+      arrowup: { x: 0, y: -1 },
+      arrowdown: { x: 0, y: 1 },
+      arrowleft: { x: -1, y: 0 },
+      arrowright: { x: 1, y: 0 },
+    }
+    return directions[key.toLowerCase()]
+  }, [])
 
-      const newSnake2 = [head2, ...updatedPlayer2.snake]
-
-      // Check if player 2 ate a seed (that player 1 didn't already eat)
-      const eatenSeedIndex2 = currentSeeds.findIndex(
-        (seed, index) =>
-          seed.x === head2.x && seed.y === head2.y && !seedsEatenThisTurn.includes(index)
-      )
-
-      if (eatenSeedIndex2 !== -1) {
-        seedsEatenThisTurn.push(eatenSeedIndex2)
-      } else {
-        // Normal movement - remove tail
-        if (newSnake2.length > GAME_CONFIG.MAX_SNAKE_LENGTH) {
-          newSnake2.pop()
-        } else if (newSnake2.length > 1) {
-          newSnake2.pop()
-        }
+  const handlePlayer1Controls = useCallback(
+    (e, game) => {
+      const direction = getDirectionFromKey(e.key)
+      if (direction) {
+        game.setPlayerDirection(1, direction)
+        return true
       }
 
-      newPlayer2 = {
-        ...updatedPlayer2,
-        snake: newSnake2,
-        direction: { ...updatedPlayer2.nextDirection },
-        score: Math.max(0, newSnake2.length - 1),
+      if (e.key === ' ') {
+        e.preventDefault()
+        game.placeObstacle(1)
+        setGameRenderData(game.getGameState())
+        return true
       }
-    }
 
-    // Remove eaten seeds
-    if (seedsEatenThisTurn.length > 0) {
-      setSeeds((prevSeeds) => prevSeeds.filter((_, index) => !seedsEatenThisTurn.includes(index)))
-    }
+      return false
+    },
+    [getDirectionFromKey]
+  )
 
-    // Update players and check collisions
-    if (newPlayer1) {
-      const collision1 = checkCollisionForPlayer(
-        newPlayer1,
-        newPlayer2 || currentPlayer2,
-        currentObstacles
-      )
-      if (collision1) {
-        setObstacles((prevObstacles) => [...prevObstacles, ...newPlayer1.snake])
-        setPlayer1({ ...newPlayer1, alive: false })
-      } else {
-        setPlayer1(newPlayer1)
+  const handlePlayer2Controls = useCallback(
+    (e, game) => {
+      if (isAIMode) return false
+
+      const direction = getDirectionFromKey(e.key)
+      if (direction && e.key.startsWith('Arrow')) {
+        game.setPlayerDirection(2, direction)
+        return true
       }
-    }
 
-    if (newPlayer2) {
-      const collision2 = checkCollisionForPlayer(
-        newPlayer2,
-        newPlayer1 || currentPlayer1,
-        currentObstacles
-      )
-      if (collision2) {
-        setObstacles((prevObstacles) => [...prevObstacles, ...newPlayer2.snake])
-        setPlayer2({ ...newPlayer2, alive: false })
-      } else {
-        setPlayer2(newPlayer2)
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        game.placeObstacle(2)
+        setGameRenderData(game.getGameState())
+        return true
       }
-    }
-  }, [gameState, isAIMode])
+
+      return false
+    },
+    [isAIMode, getDirectionFromKey]
+  )
 
   const handleKeyPress = useCallback(
     (e) => {
-      if (gameState !== 'playing') return
+      if (!gameInstanceRef.current || gameInstanceRef.current.gameState !== 'playing') return
 
-      // Player 1 controls (WASD + Space)
-      switch (e.key.toLowerCase()) {
-        case 'w':
-          setPlayer1((prev) => {
-            // Prevent 180-degree turn
-            if (prev.direction.y !== 1) {
-              return { ...prev, nextDirection: { x: 0, y: -1 } }
-            }
-            return prev
-          })
-          break
-        case 's':
-          setPlayer1((prev) => {
-            // Prevent 180-degree turn
-            if (prev.direction.y !== -1) {
-              return { ...prev, nextDirection: { x: 0, y: 1 } }
-            }
-            return prev
-          })
-          break
-        case 'a':
-          setPlayer1((prev) => {
-            // Prevent 180-degree turn
-            if (prev.direction.x !== 1) {
-              return { ...prev, nextDirection: { x: -1, y: 0 } }
-            }
-            return prev
-          })
-          break
-        case 'd':
-          setPlayer1((prev) => {
-            // Prevent 180-degree turn
-            if (prev.direction.x !== -1) {
-              return { ...prev, nextDirection: { x: 1, y: 0 } }
-            }
-            return prev
-          })
-          break
-        case ' ':
-          e.preventDefault()
-          placeObstacle(1)
-          break
+      if (e.key === 'Escape') {
+        onReturnToMenu()
+        return
       }
 
-      // Player 2 controls (IJKL + Enter) - only if not AI mode
-      if (!isAIMode) {
-        switch (e.key.toLowerCase()) {
-          case 'i':
-            setPlayer2((prev) => {
-              // Prevent 180-degree turn
-              if (prev.direction.y !== 1) {
-                return { ...prev, nextDirection: { x: 0, y: -1 } }
-              }
-              return prev
-            })
-            break
-          case 'k':
-            setPlayer2((prev) => {
-              // Prevent 180-degree turn
-              if (prev.direction.y !== -1) {
-                return { ...prev, nextDirection: { x: 0, y: 1 } }
-              }
-              return prev
-            })
-            break
-          case 'j':
-            setPlayer2((prev) => {
-              // Prevent 180-degree turn
-              if (prev.direction.x !== 1) {
-                return { ...prev, nextDirection: { x: -1, y: 0 } }
-              }
-              return prev
-            })
-            break
-          case 'l':
-            setPlayer2((prev) => {
-              // Prevent 180-degree turn
-              if (prev.direction.x !== -1) {
-                return { ...prev, nextDirection: { x: 1, y: 0 } }
-              }
-              return prev
-            })
-            break
-          case 'enter':
-            e.preventDefault()
-            placeObstacle(2)
-            break
+      const game = gameInstanceRef.current
+      const handled = handlePlayer1Controls(e, game) || handlePlayer2Controls(e, game)
+
+      if (!handled) return
+    },
+    [handlePlayer1Controls, handlePlayer2Controls, onReturnToMenu]
+  )
+
+  const clearCanvas = useCallback((ctx, width, height) => {
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, width, height)
+  }, [])
+
+  const drawSeeds = useCallback((ctx, seeds) => {
+    if (!seeds || seeds.length === 0) return
+
+    ctx.fillStyle = '#FFD700'
+    for (const seed of seeds) {
+      ctx.beginPath()
+      ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
+      ctx.fill()
+
+      ctx.fillStyle = '#FFF'
+      ctx.beginPath()
+      ctx.arc(seed.x + 8, seed.y + 8, 3, 0, 2 * Math.PI)
+      ctx.fill()
+      ctx.fillStyle = '#FFD700'
+    }
+  }, [])
+
+  const drawDottedPattern = useCallback((ctx, obstacle, gridSize) => {
+    ctx.fillStyle = '#333'
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 4; j++) {
+        if ((i + j) % 2 === 0) {
+          ctx.fillRect(
+            obstacle.x + 2 + i * (gridSize / 5),
+            obstacle.y + 2 + j * (gridSize / 5),
+            gridSize / 10,
+            gridSize / 10
+          )
+        }
+      }
+    }
+  }, [])
+
+  const drawSpecialObstacle = useCallback(
+    (ctx, obstacle, gridSize) => {
+      ctx.fillStyle = obstacle.type === 'player-remains' ? '#555' : '#999'
+      ctx.fillRect(obstacle.x + 2, obstacle.y + 2, gridSize - 4, gridSize - 4)
+
+      if (obstacle.type === 'dotted') {
+        drawDottedPattern(ctx, obstacle, gridSize)
+      }
+    },
+    [drawDottedPattern]
+  )
+
+  const drawRegularObstacle = useCallback((ctx, obstacle, gridSize) => {
+    ctx.fillStyle = '#666'
+    ctx.fillRect(obstacle.x, obstacle.y, gridSize, gridSize)
+  }, [])
+
+  const drawObstacles = useCallback(
+    (ctx, obstacles, gridSize) => {
+      if (!obstacles || obstacles.length === 0) return
+
+      for (const obstacle of obstacles) {
+        const isSpecial = obstacle.type === 'dotted' || obstacle.type === 'player-remains'
+        if (isSpecial) {
+          drawSpecialObstacle(ctx, obstacle, gridSize)
+        } else {
+          drawRegularObstacle(ctx, obstacle, gridSize)
         }
       }
     },
-    [gameState, placeObstacle]
+    [drawSpecialObstacle, drawRegularObstacle]
   )
 
-  const renderGame = (currentPlayer1, currentPlayer2, currentObstacles, currentSeeds) => {
-    if (!canvasRef.current) return
+  const drawSnakeSegment = useCallback(
+    (ctx, segment, isHead, player, gridSize, isHumanInAI) => {
+      if (isHead) {
+        ctx.fillStyle = player.color
+        ctx.fillRect(segment.x, segment.y, gridSize, gridSize)
+
+        if (isHumanInAI) {
+          ctx.strokeStyle = '#fff'
+          ctx.lineWidth = 3
+          ctx.strokeRect(segment.x - 1, segment.y - 1, gridSize + 2, gridSize + 2)
+        }
+        ctx.strokeStyle = '#fff'
+        ctx.lineWidth = 2
+        ctx.strokeRect(segment.x, segment.y, gridSize, gridSize)
+      } else {
+        ctx.fillStyle = lightenColor(player.color, 0.3)
+        ctx.fillRect(segment.x + 1, segment.y + 1, gridSize - 2, gridSize - 2)
+        if (isHumanInAI) {
+          ctx.strokeStyle = '#fff'
+          ctx.lineWidth = 2
+          ctx.strokeRect(segment.x, segment.y, gridSize, gridSize)
+        }
+      }
+    },
+    [lightenColor]
+  )
+
+  const drawSnakes = useCallback(
+    (ctx, player1, player2, gridSize) => {
+      for (const p of [player1, player2]) {
+        if (!p || !p.alive || !p.snake) continue
+
+        const isHumanPlayer1 = p === player1
+        const isHumanInAI = isAIMode && isHumanPlayer1
+
+        for (const [index, segment] of p.snake.entries()) {
+          drawSnakeSegment(ctx, segment, index === 0, p, gridSize, isHumanInAI)
+        }
+      }
+    },
+    [isAIMode, drawSnakeSegment]
+  )
+
+  const renderGame = useCallback(() => {
+    if (!canvasRef.current || !gameRenderData) return
 
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
+    const { player1, player2, obstacles, seeds, config } = gameRenderData
+    const { CANVAS_WIDTH, CANVAS_HEIGHT, GRID_SIZE } = config
 
-    // Clear canvas
-    ctx.fillStyle = '#000'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    clearCanvas(ctx, CANVAS_WIDTH, CANVAS_HEIGHT)
+    drawSeeds(ctx, seeds)
+    drawObstacles(ctx, obstacles, GRID_SIZE)
+    drawSnakes(ctx, player1, player2, GRID_SIZE)
+  }, [gameRenderData, clearCanvas, drawSeeds, drawObstacles, drawSnakes])
 
-    // Draw seeds
-    if (currentSeeds && currentSeeds.length > 0) {
-      ctx.fillStyle = '#FFD700'
-      for (const seed of currentSeeds) {
-        ctx.beginPath()
-        ctx.arc(seed.x + 10, seed.y + 10, 8, 0, 2 * Math.PI)
-        ctx.fill()
+  // Use custom hooks for game effects
+  useCountdownEffect(uiGameState, gameInstanceRef, setGameRenderData, setUiGameState)
+  useGameLoop(uiGameState, gameInstanceRef, gameLoop, gameLoopIntervalRef, seedSpawnIntervalRef)
 
-        ctx.fillStyle = '#FFF'
-        ctx.beginPath()
-        ctx.arc(seed.x + 8, seed.y + 8, 3, 0, 2 * Math.PI)
-        ctx.fill()
-        ctx.fillStyle = '#FFD700'
-      }
-    }
-
-    // Draw obstacles
-    if (currentObstacles && currentObstacles.length > 0) {
-      for (const obstacle of currentObstacles) {
-        if (obstacle.type === 'dotted') {
-          ctx.fillStyle = '#999'
-          ctx.fillRect(obstacle.x + 2, obstacle.y + 2, 16, 16)
-
-          ctx.fillStyle = '#333'
-          for (let i = 0; i < 4; i++) {
-            for (let j = 0; j < 4; j++) {
-              if ((i + j) % 2 === 0) {
-                ctx.fillRect(obstacle.x + 2 + i * 4, obstacle.y + 2 + j * 4, 2, 2)
-              }
-            }
-          }
-        } else {
-          ctx.fillStyle = '#666'
-          ctx.fillRect(obstacle.x, obstacle.y, 20, 20)
-        }
-      }
-    }
-    // Draw snakes
-    for (const [playerIndex, player] of [currentPlayer1, currentPlayer2].entries()) {
-      if (!player || !player.alive || !player.snake) continue
-
-      // In AI mode, highlight the human player (player1)
-      // In local mode (non-AI), don't highlight anyone
-      const isCurrentPlayer = isAIMode && playerIndex === 0
-
-      for (const [index, segment] of player.snake.entries()) {
-        if (index === 0) {
-          // Draw head
-          ctx.fillStyle = player.color
-          ctx.fillRect(segment.x, segment.y, 20, 20)
-
-          // Add white outline for current player in AI mode
-          if (isCurrentPlayer) {
-            ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 3
-            ctx.strokeRect(segment.x - 1, segment.y - 1, 22, 22)
-          }
-
-          ctx.strokeStyle = '#fff'
-          ctx.lineWidth = 2
-          ctx.strokeRect(segment.x, segment.y, 20, 20)
-        } else {
-          // Draw body
-          ctx.fillStyle = lightenColor(player.color, 0.3)
-          ctx.fillRect(segment.x + 1, segment.y + 1, 18, 18)
-
-          // Add white outline for current player's body in AI mode
-          if (isCurrentPlayer) {
-            ctx.strokeStyle = '#fff'
-            ctx.lineWidth = 2
-            ctx.strokeRect(segment.x, segment.y, 20, 20)
-          }
-        }
-      }
-    }
-  }
-
-  // Countdown effect
+  // Render game board
   useEffect(() => {
-    if (gameState === 'countdown') {
-      const countdownInterval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            setGameState('playing')
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-
-      return () => clearInterval(countdownInterval)
-    }
-  }, [gameState])
-
-  // Game loop effect
-  useEffect(() => {
-    if (gameState === 'playing') {
-      gameLoopRef.current = setInterval(gameLoop, GAME_CONFIG.GAME_SPEED)
-
-      return () => {
-        if (gameLoopRef.current) clearInterval(gameLoopRef.current)
-      }
-    }
-  }, [gameState, gameLoop])
-
-  // Initial seed spawning effect
-  useEffect(() => {
-    if (gameState === 'playing') {
-      // Spawn initial seeds
-      for (let i = 0; i < 3; i++) {
-        setTimeout(() => spawnSeed(), i * 500)
-      }
-
-      // Start seed spawning
-      seedSpawnRef.current = setInterval(() => {
-        // Use ref to get current seeds length to avoid stale closure
-        if (currentSeedsRef.current.length < GAME_CONFIG.MAX_SEEDS) {
-          spawnSeed()
-        }
-      }, GAME_CONFIG.SEED_SPAWN_INTERVAL)
-
-      return () => {
-        if (seedSpawnRef.current) clearInterval(seedSpawnRef.current)
-      }
-    }
-  }, [gameState])
-
-  // Check game over effect
-  useEffect(() => {
-    if (gameState === 'playing') {
-      const alivePlayers = [player1, player2].filter((p) => p.alive)
-      if (alivePlayers.length <= 1) {
-        setGameState('gameOver')
-        const winner = alivePlayers.length > 0 ? alivePlayers[0] : null
-        setGameOverData({
-          winner: winner ? { name: winner.name } : null,
-          scores: [
-            { name: player1.name, score: player1.score },
-            { name: player2.name, score: player2.score },
-          ].sort((a, b) => b.score - a.score),
-        })
-      }
-    }
-  }, [
-    player1.alive,
-    player2.alive,
-    gameState,
-    player1.name,
-    player1.score,
-    player2.name,
-    player2.score,
-  ])
-
-  // Keep refs in sync
-  useEffect(() => {
-    currentSeedsRef.current = seeds
-  }, [seeds])
-
-  useEffect(() => {
-    player1Ref.current = player1
-  }, [player1])
-
-  useEffect(() => {
-    player2Ref.current = player2
-  }, [player2])
-
-  useEffect(() => {
-    obstaclesRef.current = obstacles
-  }, [obstacles])
-
-  // Render effect
-  useEffect(() => {
-    renderGame(player1, player2, obstacles, seeds)
-  }, [player1, player2, obstacles, seeds])
+    renderGame()
+  }, [renderGame]) // Removed gameRenderData, renderGame dependency is enough
 
   // Key event listeners
   useEffect(() => {
@@ -813,74 +406,34 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     return () => document.removeEventListener('keydown', handleKeyPress)
   }, [handleKeyPress])
 
-  // Detect mobile device
-  useEffect(() => {
-    const isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      'ontouchstart' in window ||
-      navigator.maxTouchPoints > 0
-    setShowMobileControls(isMobile)
-  }, [])
-
   const handleMobileDirection = useCallback(
     (direction) => {
-      if (gameState !== 'playing') return
-
-      setPlayer1((prev) => {
-        // Prevent 180-degree turn
-        if (direction.x === 0 && direction.y === -1 && prev.direction.y !== 1) {
-          return { ...prev, nextDirection: { x: 0, y: -1 } }
-        }
-        if (direction.x === 0 && direction.y === 1 && prev.direction.y !== -1) {
-          return { ...prev, nextDirection: { x: 0, y: 1 } }
-        }
-        if (direction.x === -1 && direction.y === 0 && prev.direction.x !== 1) {
-          return { ...prev, nextDirection: { x: -1, y: 0 } }
-        }
-        if (direction.x === 1 && direction.y === 0 && prev.direction.x !== -1) {
-          return { ...prev, nextDirection: { x: 1, y: 0 } }
-        }
-        return prev
-      })
+      if (gameInstanceRef.current && gameInstanceRef.current.gameState === 'playing') {
+        gameInstanceRef.current.setPlayerDirection(1, direction)
+      }
     },
-    [gameState]
+    [] // No dependencies as gameInstanceRef is stable
   )
 
   const handleMobileObstacle = useCallback(() => {
-    if (gameState !== 'playing') return
-    placeObstacle(1)
-  }, [gameState, placeObstacle])
+    if (gameInstanceRef.current && gameInstanceRef.current.gameState === 'playing') {
+      gameInstanceRef.current.placeObstacle(1)
+      setGameRenderData(gameInstanceRef.current.getGameState()) // Update UI after action
+    }
+  }, []) // gameInstanceRef is stable
 
   const restartGame = () => {
-    setGameState('countdown')
-    setCountdown(3)
-    setPlayer1({
-      name: 'Player 1',
-      color: '#FF6B6B',
-      snake: [{ x: 100, y: 100 }],
-      direction: { x: 1, y: 0 },
-      nextDirection: { x: 1, y: 0 },
-      alive: true,
-      score: 0,
-      lastObstaclePlacement: 0,
-    })
-    setPlayer2({
-      name: isAIMode ? 'AI' : 'Player 2',
-      color: '#4ECDC4',
-      snake: [{ x: 600, y: 400 }],
-      direction: { x: -1, y: 0 },
-      nextDirection: { x: -1, y: 0 },
-      alive: true,
-      score: 0,
-      lastObstaclePlacement: 0,
-      isAI: isAIMode,
-    })
-    setObstacles([])
-    setSeeds([])
-    setGameOverData(null)
+    initializeGame() // This will reset the gameInstance and UI state
   }
 
-  if (gameState === 'countdown') {
+  // --- Render Functions ---
+  if (!gameRenderData) {
+    return <div>Loading Game...</div> // Or some other loading indicator
+  }
+
+  const { player1, player2, countdown, winner } = gameRenderData
+
+  if (uiGameState === 'countdown') {
     return (
       <div className="screen">
         <div style={{ textAlign: 'center' }}>
@@ -906,31 +459,30 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     )
   }
 
-  if (gameState === 'gameOver') {
+  if (uiGameState === 'gameOver') {
+    const scores = [
+      { name: player1.name, score: player1.score, id: 'p1' }, // Add id for key
+      { name: player2.name, score: player2.score, id: 'p2' }, // Add id for key
+    ].sort((a, b) => b.score - a.score)
+
     return (
       <div className="screen">
         <div style={{ textAlign: 'center' }}>
           <h2>🏁 Game Over!</h2>
-          {gameOverData.winner ? (
-            <h3>🏆 {gameOverData.winner.name} Wins!</h3>
-          ) : (
-            <h3>💥 It's a Draw!</h3>
-          )}
-
+          {winner ? <h3>🏆 {winner.name} Wins!</h3> : <h3>💥 It's a Draw!</h3>}
           <div style={{ margin: '30px 0' }}>
             <h4>Final Scores:</h4>
-            {gameOverData.scores.map((score, index) => (
-              <div key={index} style={{ margin: '10px 0', fontSize: '18px' }}>
-                {index === 0 ? '🥇' : '🥈'} {score.name}: {score.score}
+            {scores.map((s, index) => (
+              <div key={s.id} style={{ margin: '10px 0', fontSize: '18px' }}>
+                {index === 0 ? '🥇' : '🥈'} {s.name}: {s.score}
               </div>
             ))}
           </div>
-
           <div className="form-group">
-            <button className="btn" onClick={restartGame}>
+            <button type="button" className="btn" onClick={restartGame}>
               🔄 Play Again
             </button>
-            <button className="btn btn-secondary" onClick={onReturnToMenu}>
+            <button type="button" className="btn btn-secondary" onClick={onReturnToMenu}>
               🏠 Return to Menu
             </button>
           </div>
@@ -939,29 +491,26 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
     )
   }
 
+  // Playing state
   return (
     <div className="screen">
       <div className="game-ui">
-        <div className="game-info" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div>
-            <div>
-              <strong>Player 1 ({player1.name}):</strong> {player1.score}{' '}
-              {player1.alive ? '🐍' : '💀'}
-            </div>
-            <div>Obstacle: {canPlaceObstacle(player1) ? '✅' : '⏳'}</div>
-          </div>
-          <div style={{ textAlign: 'right' }}>
-            <div>
-              <strong>Player 2 ({player2.name}):</strong> {player2.score}{' '}
-              {player2.alive ? '🐍' : '💀'}
-            </div>
-            <div>Obstacle: {canPlaceObstacle(player2) ? '✅' : '⏳'}</div>
-          </div>
-        </div>
+        <GameInfo
+          player1={player1}
+          player2={player2}
+          gameInstanceRef={gameInstanceRef}
+          isAIMode={isAIMode}
+        />
 
-        <canvas ref={canvasRef} className="game-canvas" width={640} height={480} />
+        <canvas
+          ref={canvasRef}
+          className="game-canvas"
+          width={GAME_CONFIG_DEFAULTS.CANVAS_WIDTH}
+          height={GAME_CONFIG_DEFAULTS.CANVAS_HEIGHT}
+        />
 
         <div className="controls-info">
+          {/* ... (rest of controls info, same as before) ... */}
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div>
               <p>
@@ -993,7 +542,9 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
                 marginTop: '10px',
               }}
             >
-              <label htmlFor="local-control-type-select" style={{ fontSize: '14px' }}>Control Type:</label>
+              <label htmlFor="local-control-type-select" style={{ fontSize: '14px' }}>
+                Control Type:
+              </label>
               <select
                 id="local-control-type-select"
                 value={controlType}
@@ -1014,14 +565,11 @@ function LocalGameScreen({ onReturnToMenu, isAIMode = false }) {
         </div>
       </div>
 
-      {showMobileControls && (
-        <MobileController
-          onDirectionChange={handleMobileDirection}
-          onObstaclePlace={handleMobileObstacle}
-          controlType={controlType}
-          disabled={!player1.alive || gameState !== 'playing'}
-        />
-      )}
+      <MobileControls
+        showMobileControls={showMobileControls && player1.alive && uiGameState === 'playing'}
+        handleMobileDirection={handleMobileDirection}
+        handleMobileObstacle={handleMobileObstacle}
+      />
     </div>
   )
 }

@@ -46,14 +46,21 @@ Environment Variables:
   process.exit(0)
 }
 
+// Import LocalGame logic
+import LocalGame from './src/lib/localGameLogic.js';
+
+
 // Game states
 const GAME_STATES = {
   MENU: 'menu',
   LOBBY: 'lobby',
-  COUNTDOWN: 'countdown',
-  PLAYING: 'playing',
-  GAME_OVER: 'gameOver',
-  LOCAL_GAME: 'localGame',
+  COUNTDOWN: 'countdown', // Online game countdown
+  PLAYING: 'playing', // Online game playing
+  GAME_OVER: 'gameOver', // Online game gameover
+  LOCAL_GAME: 'localGame', // Placeholder, not fully implemented as per user request
+  AI_GAME_COUNTDOWN: 'aiGameCountdown',
+  AI_GAME_PLAYING: 'aiGamePlaying',
+  AI_GAME_OVER: 'aiGameOver',
 }
 
 // TUI Theme colors
@@ -66,7 +73,18 @@ const COLORS = {
   text: '#00ff00',
   textSecondary: '#ffffff',
   border: '#00ff00',
+  aiColor: '#4ECDC4', // Color for AI snake
+  playerColor: '#FF6B6B', // Color for human player
 }
+
+// Game Config for TUI (simplified)
+const TUI_GAME_CONFIG = {
+  GAME_WIDTH_CHARS: 64, // Roughly (640px / 20px_grid_size) * 2 for char aspect ratio
+  GAME_HEIGHT_CHARS: 24, // Roughly 480px / 20px_grid_size
+  GAME_SPEED_MS: 150, // milliseconds per game tick
+  SEED_SPAWN_INTERVAL_MS: 4000,
+};
+
 
 // Helper to create elements with JSX-like syntax
 const h = React.createElement
@@ -83,10 +101,10 @@ const Header = () => h(Box, {
 }, '🐍 SNAKE FIGHTER - TUI CLIENT 🐍'))
 
 // Menu Screen Component
-const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected }) => {
+const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, onStartAIGame, isConnected }) => {
   const [playerName, setPlayerName] = useState('')
   const [roomId, setRoomId] = useState('')
-  const [currentInput, setCurrentInput] = useState('name')
+  const [currentInput, setCurrentInput] = useState('name') // 'name', 'action', 'roomId'
 
   useInput((input, key) => {
     if (key.return) {
@@ -97,50 +115,32 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
       }
     }
     if (key.escape) {
-      setCurrentInput('name')
+      if (currentInput === 'roomId') setCurrentInput('action');
+      else if (currentInput === 'action') setCurrentInput('name');
     }
   })
 
   const menuItems = [
-    {
-      label: '🌐 Create Online Room',
-      value: 'create',
-      disabled: !isConnected || !playerName.trim(),
-    },
-    {
-      label: '🏠 Join Room',
-      value: 'join',
-      disabled: !isConnected || !playerName.trim(),
-    },
-    {
-      label: '🖥️  Local Game',
-      value: 'local',
-      disabled: !playerName.trim(),
-    },
-    {
-      label: '🤖 AI Game',
-      value: 'ai',
-      disabled: !playerName.trim(),
-    },
-    {
-      label: '❌ Exit',
-      value: 'exit',
-    },
+    { label: '🌐 Create Online Room', value: 'create', disabled: !isConnected || !playerName.trim() },
+    { label: '🏠 Join Room', value: 'join', disabled: !isConnected || !playerName.trim() },
+    // { label: '🖥️  Local Game (2P - Not Implemented)', value: 'local', disabled: true || !playerName.trim() },
+    { label: '🤖 Play Local AI Game', value: 'ai', disabled: !playerName.trim() },
+    { label: '❌ Exit', value: 'exit' },
   ]
 
   const handleSelect = (item) => {
     switch (item.value) {
       case 'create':
-        onCreateRoom(playerName.trim())
+        if (playerName.trim()) onCreateRoom(playerName.trim());
         break
       case 'join':
-        setCurrentInput('roomId')
+        if (playerName.trim()) setCurrentInput('roomId');
         break
-      case 'local':
-        onStartLocalGame()
-        break
+      // case 'local': // Local 2P not implemented
+      //   if (playerName.trim()) onStartLocalGame(playerName.trim());
+      //   break
       case 'ai':
-        // TODO: Implement AI game
+        if (playerName.trim()) onStartAIGame(playerName.trim());
         break
       case 'exit':
         process.exit(0)
@@ -150,89 +150,42 @@ const MenuScreen = ({ onCreateRoom, onJoinRoom, onStartLocalGame, isConnected })
 
   return h(Box, { flexDirection: "column", padding: 1 }, [
     h(Header, { key: 'header' }),
-
-    h(Box, {
-      key: 'status',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1,
-      marginBottom: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, { key: 'label', color: COLORS.accent }, 'Connection Status: '),
-      h(Text, {
-        key: 'status',
-        color: isConnected ? COLORS.primary : COLORS.danger
-      }, isConnected ? '✅ Connected' : '❌ Disconnected')
-    ])),
-
-    h(Box, {
-      key: 'name',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1,
-      marginBottom: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, { key: 'label', color: COLORS.accent }, 'Player Name:'),
-      currentInput === 'name'
-        ? h(TextInput, {
-            key: 'input',
-            value: playerName,
-            onChange: setPlayerName,
-            placeholder: "Enter your name..."
-          })
-        : h(Text, { key: 'display', color: COLORS.text }, playerName || '(not set)'),
-      currentInput === 'name' && h(Text, {
-        key: 'help',
-        color: COLORS.textSecondary,
-        dimColor: true
-      }, 'Press Enter to continue')
-    ])),
-
-    currentInput === 'roomId' && h(Box, {
-      key: 'roomId',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1,
-      marginBottom: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, { key: 'label', color: COLORS.accent }, 'Room ID:'),
-      h(TextInput, {
-        key: 'input',
-        value: roomId,
-        onChange: setRoomId,
-        placeholder: "Enter room ID..."
-      }),
-      h(Text, {
-        key: 'help',
-        color: COLORS.textSecondary,
-        dimColor: true
-      }, 'Press Enter to join, Escape to cancel')
-    ])),
-
-    currentInput === 'action' && h(Box, {
-      key: 'menu',
-      borderStyle: "single",
-      borderColor: COLORS.border,
-      padding: 1
-    }, h(Box, { flexDirection: "column" }, [
-      h(Text, {
-        key: 'label',
-        color: COLORS.accent,
-        marginBottom: 1
-      }, 'Choose an option:'),
-      h(SelectInput, {
-        key: 'select',
-        items: menuItems,
-        onSelect: handleSelect
-      })
-    ]))
+    h(Box, { key: 'statusBox', borderStyle: "single", borderColor: COLORS.border, padding:1, marginBottom:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'statusLabel', color: COLORS.accent }, 'Connection Status: '),
+        h(Text, { key: 'statusValue', color: isConnected ? COLORS.primary : COLORS.danger }, isConnected ? '✅ Connected' : '❌ Disconnected (Online modes unavailable)')
+      ])
+    ),
+    h(Box, { key: 'nameBox', borderStyle: "single", borderColor: COLORS.border, padding:1, marginBottom:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'nameLabel', color: COLORS.accent }, 'Player Name:'),
+        currentInput === 'name'
+          ? h(TextInput, { key: 'nameInput', value: playerName, onChange: setPlayerName, placeholder: "Enter your name..." })
+          : h(Text, { key: 'nameDisplay', color: COLORS.text }, playerName || '(not set)'),
+        currentInput === 'name' && h(Text, { key: 'nameHelp', color: COLORS.textSecondary, dimColor: true }, 'Press Enter to continue')
+      ])
+    ),
+    currentInput === 'roomId' && h(Box, { key: 'roomIdBox', borderStyle: "single", borderColor: COLORS.border, padding:1, marginBottom:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'roomIdLabel', color: COLORS.accent }, 'Room ID:'),
+        h(TextInput, { key: 'roomIdInput', value: roomId, onChange: setRoomId, placeholder: "Enter room ID..." }),
+        h(Text, { key: 'roomIdHelp', color: COLORS.textSecondary, dimColor: true }, 'Press Enter to join, Escape to cancel')
+      ])
+    ),
+    currentInput === 'action' && h(Box, { key: 'menuBox', borderStyle: "single", borderColor: COLORS.border, padding:1 },
+      h(Box, {flexDirection: "column"}, [
+        h(Text, { key: 'menuLabel', color: COLORS.accent, marginBottom:1 }, 'Choose an option:'),
+        h(SelectInput, { key: 'menuSelect', items: menuItems, onSelect: handleSelect })
+      ])
+    )
   ])
 }
 
-// Lobby Screen Component
+
+// Lobby Screen Component (Online Play)
 const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
   useInput((input, key) => {
-    if (key.return && room.host === playerId) {
+    if (key.return && room.hostId === playerId) {
       onStartGame()
     }
     if (key.escape) {
@@ -272,7 +225,7 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
       ...room.players.map((player, index) => h(Text, {
         key: player.id,
         color: COLORS.text
-      }, `${index + 1}. ${player.name} ${player.id === room.host ? '👑' : ''} ${player.id === playerId ? '(You)' : ''}`))
+      }, `${index + 1}. ${player.name} ${player.id === room.hostId ? '👑' : ''} ${player.id === playerId ? '(You)' : ''}`))
     ])),
 
     h(Box, {
@@ -281,10 +234,10 @@ const LobbyScreen = ({ room, playerId, onStartGame, onLeaveRoom }) => {
       borderColor: COLORS.border,
       padding: 1
     }, h(Box, { flexDirection: "column" }, [
-      room.host === playerId
+      room.hostId === playerId
         ? h(Text, { key: 'host', color: COLORS.primary }, 'You are the host!')
         : h(Text, { key: 'wait', color: COLORS.textSecondary }, 'Waiting for host to start game...'),
-      room.host === playerId && h(Text, {
+      room.hostId === playerId && h(Text, {
         key: 'start',
         color: COLORS.textSecondary
       }, 'Press Enter to start game'),
@@ -540,6 +493,8 @@ const SnakeFighterTUI = () => {
   const [gameData, setGameData] = useState(null)
   const [gameOverData, setGameOverData] = useState(null)
   const [error, setError] = useState('')
+  const [localGame, setLocalGame] = useState(null)
+  const [playerName, setPlayerName] = useState('')
 
   const { exit } = useApp()
 
@@ -621,7 +576,7 @@ const SnakeFighterTUI = () => {
       exit()
     }
 
-    // Game controls
+    // Game controls for online games
     if (gameState === GAME_STATES.PLAYING && socket && isConnected) {
       let direction = null
 
@@ -645,8 +600,34 @@ const SnakeFighterTUI = () => {
       }
     }
 
+    // Game controls for AI games
+    if (gameState === GAME_STATES.AI_GAME_PLAYING && localGame) {
+      let direction = null
+
+      if (key.upArrow || input === 'w') {
+        direction = { x: 0, y: -1 } // Use normalized direction vectors
+      } else if (key.downArrow || input === 's') {
+        direction = { x: 0, y: 1 }
+      } else if (key.leftArrow || input === 'a') {
+        direction = { x: -1, y: 0 }
+      } else if (key.rightArrow || input === 'd') {
+        direction = { x: 1, y: 0 }
+      }
+
+      if (direction) {
+        localGame.setPlayerDirection(1, direction) // Player 1 is human
+      }
+
+      // Obstacle placement
+      if (input === ' ') {
+        localGame.placeObstacle(1)
+      }
+    }
+
     // Global escape handler
-    if (key.escape && gameState === GAME_STATES.LOCAL_GAME) {
+    if (key.escape && (gameState === GAME_STATES.LOCAL_GAME || 
+                       gameState === GAME_STATES.AI_GAME_PLAYING || 
+                       gameState === GAME_STATES.AI_GAME_COUNTDOWN)) {
       returnToMenu()
     }
   })
@@ -658,6 +639,91 @@ const SnakeFighterTUI = () => {
       return () => clearTimeout(timeout)
     }
   }, [error])
+
+  // AI Game countdown and game loop
+  useEffect(() => {
+    let countdownInterval
+    let gameInterval
+
+    if (gameState === GAME_STATES.AI_GAME_COUNTDOWN && localGame) {
+      countdownInterval = setInterval(() => {
+        const gameStarted = localGame.tickCountdown()
+        const currentGameState = localGame.getGameState()
+        setCountdown(currentGameState.countdown)
+        
+        // Update game data during countdown so snakes are visible
+        setGameData({
+          players: [
+            {
+              id: 1,
+              name: currentGameState.player1.name,
+              snake: currentGameState.player1.snake,
+              alive: currentGameState.player1.alive,
+              score: currentGameState.player1.score
+            },
+            {
+              id: 2,
+              name: currentGameState.player2.name,
+              snake: currentGameState.player2.snake,
+              alive: currentGameState.player2.alive,
+              score: currentGameState.player2.score
+            }
+          ],
+          seeds: currentGameState.seeds,
+          obstacles: currentGameState.obstacles
+        })
+        
+        if (gameStarted) {
+          setGameState(GAME_STATES.AI_GAME_PLAYING)
+        }
+      }, 1000)
+    }
+
+    if (gameState === GAME_STATES.AI_GAME_PLAYING && localGame) {
+      gameInterval = setInterval(() => {
+        localGame.update()
+        const gameState = localGame.getGameState()
+        
+        if (gameState.gameState === 'gameOver') {
+          setGameOverData({
+            winner: gameState.winner,
+            scores: [
+              { id: 1, name: gameState.player1.name, score: gameState.player1.score },
+              { id: 2, name: gameState.player2.name, score: gameState.player2.score }
+            ].sort((a, b) => b.score - a.score)
+          })
+          setGameState(GAME_STATES.AI_GAME_OVER)
+        } else {
+          // Convert LocalGame state to format expected by GameScreen
+          setGameData({
+            players: [
+              {
+                id: 1,
+                name: gameState.player1.name,
+                snake: gameState.player1.snake,
+                alive: gameState.player1.alive,
+                score: gameState.player1.score
+              },
+              {
+                id: 2,
+                name: gameState.player2.name,
+                snake: gameState.player2.snake,
+                alive: gameState.player2.alive,
+                score: gameState.player2.score
+              }
+            ],
+            seeds: gameState.seeds,
+            obstacles: gameState.obstacles
+          })
+        }
+      }, TUI_GAME_CONFIG.GAME_SPEED_MS)
+    }
+
+    return () => {
+      if (countdownInterval) clearInterval(countdownInterval)
+      if (gameInterval) clearInterval(gameInterval)
+    }
+  }, [gameState, localGame])
 
   const createRoom = useCallback((playerName) => {
     if (!socket || !isConnected) return
@@ -683,6 +749,40 @@ const SnakeFighterTUI = () => {
 
   const startLocalGame = useCallback(() => {
     setGameState(GAME_STATES.LOCAL_GAME)
+  }, [])
+
+  const startAIGame = useCallback((name) => {
+    setPlayerName(name)
+    const game = new LocalGame(TUI_GAME_CONFIG, true) // true for AI mode
+    setLocalGame(game)
+    
+    // Get initial game state for countdown and initial rendering
+    const initialState = game.getGameState()
+    setCountdown(initialState.countdown)
+    
+    // Set initial game data so the game screen can render during countdown
+    setGameData({
+      players: [
+        {
+          id: 1,
+          name: initialState.player1.name,
+          snake: initialState.player1.snake,
+          alive: initialState.player1.alive,
+          score: initialState.player1.score
+        },
+        {
+          id: 2,
+          name: initialState.player2.name,
+          snake: initialState.player2.snake,
+          alive: initialState.player2.alive,
+          score: initialState.player2.score
+        }
+      ],
+      seeds: initialState.seeds,
+      obstacles: initialState.obstacles
+    })
+    
+    setGameState(GAME_STATES.AI_GAME_COUNTDOWN)
   }, [])
 
   const returnToMenu = useCallback(() => {
@@ -718,6 +818,7 @@ const SnakeFighterTUI = () => {
       onCreateRoom: createRoom,
       onJoinRoom: joinRoom,
       onStartLocalGame: startLocalGame,
+      onStartAIGame: startAIGame,
       isConnected: isConnected
     }))
   }
@@ -739,11 +840,26 @@ const SnakeFighterTUI = () => {
     }))
   }
 
+  if (gameState === GAME_STATES.AI_GAME_COUNTDOWN) {
+    elements.push(h(CountdownScreen, {
+      key: 'ai-countdown',
+      countdown: countdown
+    }))
+  }
+
   if (gameState === GAME_STATES.PLAYING) {
     elements.push(h(GameScreen, {
       key: 'game',
       gameData: gameData,
       playerId: playerId
+    }))
+  }
+
+  if (gameState === GAME_STATES.AI_GAME_PLAYING) {
+    elements.push(h(GameScreen, {
+      key: 'ai-game',
+      gameData: gameData,
+      playerId: 1 // Human player is always player 1 in AI mode
     }))
   }
 
@@ -753,6 +869,16 @@ const SnakeFighterTUI = () => {
       gameOverData: gameOverData,
       playerId: playerId,
       onPlayAgain: returnToLobby,
+      onReturnToMenu: returnToMenu
+    }))
+  }
+
+  if (gameState === GAME_STATES.AI_GAME_OVER && gameOverData) {
+    elements.push(h(GameOverScreen, {
+      key: 'ai-gameover',
+      gameOverData: gameOverData,
+      playerId: 1, // Human player is always player 1 in AI mode
+      onPlayAgain: () => startAIGame(playerName),
       onReturnToMenu: returnToMenu
     }))
   }
