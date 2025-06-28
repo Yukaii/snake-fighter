@@ -12,6 +12,7 @@
     "build:prod": "vite build && NODE_ENV=production node server.js",
     "build:start": "bun run build && bun run start",
     "tui": "node tui-client.mjs",
+    "test:localgame": "node test-localgame.mjs",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format .",

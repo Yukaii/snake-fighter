@@ -49,6 +49,7 @@ A terminal-based client that provides the same multiplayer experience:
 - `npm run start` - Start production server
 - `npm run client` - Start Vite dev server only
 - `npm run tui` - Start TUI (Terminal) client
+- `npm run test:localgame` - Test LocalGame logic (for debugging)
 - `npm run lint` - Run Biome linter
 - `npm run format` - Check formatting with Biome
 - `npm run check` - Run all Biome checks (lint + format)
