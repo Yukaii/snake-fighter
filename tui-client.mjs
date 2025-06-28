@@ -47,8 +47,7 @@ Environment Variables:
 }
 
 // Import LocalGame logic
-// Note: Adjust path if your project structure is different or if you use a bundler for the TUI client
-const LocalGame = require('./src/lib/localGameLogic.js').default;
+import LocalGame from './src/lib/localGameLogic.js';
 
 
 // Game states
@@ -494,6 +493,8 @@ const SnakeFighterTUI = () => {
   const [gameData, setGameData] = useState(null)
   const [gameOverData, setGameOverData] = useState(null)
   const [error, setError] = useState('')
+  const [localGame, setLocalGame] = useState(null)
+  const [playerName, setPlayerName] = useState('')
 
   const { exit } = useApp()
 
@@ -575,7 +576,7 @@ const SnakeFighterTUI = () => {
       exit()
     }
 
-    // Game controls
+    // Game controls for online games
     if (gameState === GAME_STATES.PLAYING && socket && isConnected) {
       let direction = null
 
@@ -599,8 +600,34 @@ const SnakeFighterTUI = () => {
       }
     }
 
+    // Game controls for AI games
+    if (gameState === GAME_STATES.AI_GAME_PLAYING && localGame) {
+      let direction = null
+
+      if (key.upArrow || input === 'w') {
+        direction = { x: 0, y: -20 } // Use grid size for LocalGame
+      } else if (key.downArrow || input === 's') {
+        direction = { x: 0, y: 20 }
+      } else if (key.leftArrow || input === 'a') {
+        direction = { x: -20, y: 0 }
+      } else if (key.rightArrow || input === 'd') {
+        direction = { x: 20, y: 0 }
+      }
+
+      if (direction) {
+        localGame.setPlayerDirection(1, direction) // Player 1 is human
+      }
+
+      // Obstacle placement
+      if (input === ' ') {
+        localGame.placeObstacle(1)
+      }
+    }
+
     // Global escape handler
-    if (key.escape && gameState === GAME_STATES.LOCAL_GAME) {
+    if (key.escape && (gameState === GAME_STATES.LOCAL_GAME || 
+                       gameState === GAME_STATES.AI_GAME_PLAYING || 
+                       gameState === GAME_STATES.AI_GAME_COUNTDOWN)) {
       returnToMenu()
     }
   })
@@ -612,6 +639,69 @@ const SnakeFighterTUI = () => {
       return () => clearTimeout(timeout)
     }
   }, [error])
+
+  // AI Game countdown and game loop
+  useEffect(() => {
+    let countdownInterval
+    let gameInterval
+
+    if (gameState === GAME_STATES.AI_GAME_COUNTDOWN) {
+      countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            setGameState(GAME_STATES.AI_GAME_PLAYING)
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    if (gameState === GAME_STATES.AI_GAME_PLAYING && localGame) {
+      gameInterval = setInterval(() => {
+        localGame.update()
+        const gameState = localGame.getGameState()
+        
+        if (gameState.gameState === 'gameOver') {
+          setGameOverData({
+            winner: gameState.winner,
+            scores: [
+              { id: 1, name: gameState.player1.name, score: gameState.player1.score },
+              { id: 2, name: gameState.player2.name, score: gameState.player2.score }
+            ].sort((a, b) => b.score - a.score)
+          })
+          setGameState(GAME_STATES.AI_GAME_OVER)
+        } else {
+          // Convert LocalGame state to format expected by GameScreen
+          setGameData({
+            players: [
+              {
+                id: 1,
+                name: gameState.player1.name,
+                snake: gameState.player1.snake,
+                alive: gameState.player1.alive,
+                score: gameState.player1.score
+              },
+              {
+                id: 2,
+                name: gameState.player2.name,
+                snake: gameState.player2.snake,
+                alive: gameState.player2.alive,
+                score: gameState.player2.score
+              }
+            ],
+            seeds: gameState.seeds,
+            obstacles: gameState.obstacles
+          })
+        }
+      }, TUI_GAME_CONFIG.GAME_SPEED_MS)
+    }
+
+    return () => {
+      if (countdownInterval) clearInterval(countdownInterval)
+      if (gameInterval) clearInterval(gameInterval)
+    }
+  }, [gameState, localGame])
 
   const createRoom = useCallback((playerName) => {
     if (!socket || !isConnected) return
@@ -637,6 +727,14 @@ const SnakeFighterTUI = () => {
 
   const startLocalGame = useCallback(() => {
     setGameState(GAME_STATES.LOCAL_GAME)
+  }, [])
+
+  const startAIGame = useCallback((name) => {
+    setPlayerName(name)
+    const game = new LocalGame(TUI_GAME_CONFIG, true) // true for AI mode
+    setLocalGame(game)
+    setGameState(GAME_STATES.AI_GAME_COUNTDOWN)
+    setCountdown(3)
   }, [])
 
   const returnToMenu = useCallback(() => {
@@ -672,6 +770,7 @@ const SnakeFighterTUI = () => {
       onCreateRoom: createRoom,
       onJoinRoom: joinRoom,
       onStartLocalGame: startLocalGame,
+      onStartAIGame: startAIGame,
       isConnected: isConnected
     }))
   }
@@ -693,11 +792,26 @@ const SnakeFighterTUI = () => {
     }))
   }
 
+  if (gameState === GAME_STATES.AI_GAME_COUNTDOWN) {
+    elements.push(h(CountdownScreen, {
+      key: 'ai-countdown',
+      countdown: countdown
+    }))
+  }
+
   if (gameState === GAME_STATES.PLAYING) {
     elements.push(h(GameScreen, {
       key: 'game',
       gameData: gameData,
       playerId: playerId
+    }))
+  }
+
+  if (gameState === GAME_STATES.AI_GAME_PLAYING) {
+    elements.push(h(GameScreen, {
+      key: 'ai-game',
+      gameData: gameData,
+      playerId: 1 // Human player is always player 1 in AI mode
     }))
   }
 
@@ -707,6 +821,16 @@ const SnakeFighterTUI = () => {
       gameOverData: gameOverData,
       playerId: playerId,
       onPlayAgain: returnToLobby,
+      onReturnToMenu: returnToMenu
+    }))
+  }
+
+  if (gameState === GAME_STATES.AI_GAME_OVER && gameOverData) {
+    elements.push(h(GameOverScreen, {
+      key: 'ai-gameover',
+      gameOverData: gameOverData,
+      playerId: 1, // Human player is always player 1 in AI mode
+      onPlayAgain: () => startAIGame(playerName),
       onReturnToMenu: returnToMenu
     }))
   }
