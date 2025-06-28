@@ -48,7 +48,7 @@ Environment Variables:
 
 // Import LocalGame logic
 // Note: Adjust path if your project structure is different or if you use a bundler for the TUI client
-const LocalGame = require('./src/lib/localGameLogic.js')
+const LocalGame = require('./src/lib/localGameLogic.js').default;
 
 
 // Game states
