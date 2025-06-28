@@ -1,28 +1,29 @@
 # Multi-stage build for Snake Fighter
-FROM oven/bun:1-alpine AS base
+FROM node:20-alpine AS base
 
-# Install Caddy, Node.js, and debugging tools
-RUN apk add --no-cache caddy nodejs curl wget netcat-openbsd htop procps
+# Install pnpm and system dependencies
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN apk add --no-cache caddy curl wget netcat-openbsd htop procps
 
 # Set work directory
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lock ./
+COPY package.json pnpm-lock.yaml ./
 
 # Install production dependencies
-RUN bun install --frozen-lockfile --production
+RUN pnpm install --frozen-lockfile --prod
 
 FROM base AS build
 
 # Install all dependencies for building
-RUN bun install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Copy source code
 COPY . .
 
 # Build the React frontend
-RUN bun run build
+RUN pnpm run build
 
 # Debug: List built assets
 RUN ls -la dist/assets/
