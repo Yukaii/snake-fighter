@@ -10,7 +10,7 @@
     "client": "vite",
     "preview": "vite preview",
     "build:prod": "vite build && NODE_ENV=production node server.js",
-    "build:start": "bun run build && bun run start",
+    "build:start": "pnpm run build && pnpm run start",
     "tui": "node tui-client.mjs",
     "test:localgame": "node test-localgame.mjs",
     "lint": "biome lint .",
