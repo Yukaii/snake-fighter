@@ -605,13 +605,13 @@ const SnakeFighterTUI = () => {
       let direction = null
 
       if (key.upArrow || input === 'w') {
-        direction = { x: 0, y: -20 } // Use grid size for LocalGame
+        direction = { x: 0, y: -1 } // Use normalized direction vectors
       } else if (key.downArrow || input === 's') {
-        direction = { x: 0, y: 20 }
+        direction = { x: 0, y: 1 }
       } else if (key.leftArrow || input === 'a') {
-        direction = { x: -20, y: 0 }
+        direction = { x: -1, y: 0 }
       } else if (key.rightArrow || input === 'd') {
-        direction = { x: 20, y: 0 }
+        direction = { x: 1, y: 0 }
       }
 
       if (direction) {
@@ -645,15 +645,37 @@ const SnakeFighterTUI = () => {
     let countdownInterval
     let gameInterval
 
-    if (gameState === GAME_STATES.AI_GAME_COUNTDOWN) {
+    if (gameState === GAME_STATES.AI_GAME_COUNTDOWN && localGame) {
       countdownInterval = setInterval(() => {
-        setCountdown(prev => {
-          if (prev <= 1) {
-            setGameState(GAME_STATES.AI_GAME_PLAYING)
-            return 0
-          }
-          return prev - 1
+        const gameStarted = localGame.tickCountdown()
+        const currentGameState = localGame.getGameState()
+        setCountdown(currentGameState.countdown)
+        
+        // Update game data during countdown so snakes are visible
+        setGameData({
+          players: [
+            {
+              id: 1,
+              name: currentGameState.player1.name,
+              snake: currentGameState.player1.snake,
+              alive: currentGameState.player1.alive,
+              score: currentGameState.player1.score
+            },
+            {
+              id: 2,
+              name: currentGameState.player2.name,
+              snake: currentGameState.player2.snake,
+              alive: currentGameState.player2.alive,
+              score: currentGameState.player2.score
+            }
+          ],
+          seeds: currentGameState.seeds,
+          obstacles: currentGameState.obstacles
         })
+        
+        if (gameStarted) {
+          setGameState(GAME_STATES.AI_GAME_PLAYING)
+        }
       }, 1000)
     }
 
@@ -733,8 +755,34 @@ const SnakeFighterTUI = () => {
     setPlayerName(name)
     const game = new LocalGame(TUI_GAME_CONFIG, true) // true for AI mode
     setLocalGame(game)
+    
+    // Get initial game state for countdown and initial rendering
+    const initialState = game.getGameState()
+    setCountdown(initialState.countdown)
+    
+    // Set initial game data so the game screen can render during countdown
+    setGameData({
+      players: [
+        {
+          id: 1,
+          name: initialState.player1.name,
+          snake: initialState.player1.snake,
+          alive: initialState.player1.alive,
+          score: initialState.player1.score
+        },
+        {
+          id: 2,
+          name: initialState.player2.name,
+          snake: initialState.player2.snake,
+          alive: initialState.player2.alive,
+          score: initialState.player2.score
+        }
+      ],
+      seeds: initialState.seeds,
+      obstacles: initialState.obstacles
+    })
+    
     setGameState(GAME_STATES.AI_GAME_COUNTDOWN)
-    setCountdown(3)
   }, [])
 
   const returnToMenu = useCallback(() => {

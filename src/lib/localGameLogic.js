@@ -259,61 +259,73 @@ class LocalGame {
       return spaceCount
     }
 
-    const directionScores = validDirections.map((direction) => {
+    const calculateLookaheadScore = (direction, nextHead) => {
+      let score = 0
+      let currentPos = nextHead
+
+      for (let lookahead = 1; lookahead <= 5; lookahead++) {
+        const futureHead = {
+          x: currentPos.x + direction.x * this.config.GRID_SIZE,
+          y: currentPos.y + direction.y * this.config.GRID_SIZE,
+        }
+
+        if (!isPositionSafe(futureHead)) {
+          score -= 200 / lookahead
+          break
+        }
+
+        const wallDistance = Math.min(
+          futureHead.x,
+          this.config.CANVAS_WIDTH - futureHead.x - this.config.GRID_SIZE,
+          futureHead.y,
+          this.config.CANVAS_HEIGHT - futureHead.y - this.config.GRID_SIZE
+        )
+
+        if (wallDistance < this.config.GRID_SIZE * 2) {
+          score -= (20 - wallDistance) / lookahead
+        }
+
+        currentPos = futureHead
+      }
+
+      return score
+    }
+
+    const calculateSeedScore = (nextHead, availableSpace) => {
+      if (this.seeds.length === 0 || availableSpace <= 10) return 0
+
+      const nearestSeed = this.seeds.reduce((nearest, seed) => {
+        const distToSeed = Math.abs(seed.x - nextHead.x) + Math.abs(seed.y - nextHead.y)
+        const distToNearest = Math.abs(nearest.x - nextHead.x) + Math.abs(nearest.y - nextHead.y)
+        return distToSeed < distToNearest ? seed : nearest
+      })
+
+      const distanceToSeed =
+        Math.abs(nearestSeed.x - nextHead.x) + Math.abs(nearestSeed.y - nextHead.y)
+      return Math.max(0, 100 - distanceToSeed * 0.5)
+    }
+
+    const scoreDirection = (direction) => {
       const nextHead = {
         x: head.x + direction.x * this.config.GRID_SIZE,
         y: head.y + direction.y * this.config.GRID_SIZE,
       }
-      let score = 0
 
       if (!isPositionSafe(nextHead)) {
-        score -= 10000
-      } else {
-        score += 100
-        const availableSpace = calculateAvailableSpace(nextHead)
-        score += availableSpace * 10
-
-        let currentPos = nextHead
-        for (let lookahead = 1; lookahead <= 5; lookahead++) {
-          const futureHead = {
-            x: currentPos.x + direction.x * this.config.GRID_SIZE,
-            y: currentPos.y + direction.y * this.config.GRID_SIZE,
-          }
-          if (!isPositionSafe(futureHead)) {
-            score -= 200 / lookahead
-            break
-          }
-          const wallDistance = Math.min(
-            futureHead.x,
-            this.config.CANVAS_WIDTH - futureHead.x - this.config.GRID_SIZE,
-            futureHead.y,
-            this.config.CANVAS_HEIGHT - futureHead.y - this.config.GRID_SIZE
-          )
-          if (wallDistance < this.config.GRID_SIZE * 2) {
-            score -= (20 - wallDistance) / lookahead
-          }
-          currentPos = futureHead
-        }
-
-        if (this.seeds.length > 0) {
-          const nearestSeed = this.seeds.reduce((nearest, seed) => {
-            const distToSeed = Math.abs(seed.x - nextHead.x) + Math.abs(seed.y - nextHead.y)
-            const distToNearest =
-              Math.abs(nearest.x - nextHead.x) + Math.abs(nearest.y - nextHead.y)
-            return distToSeed < distToNearest ? seed : nearest
-          })
-          const distanceToSeed =
-            Math.abs(nearestSeed.x - nextHead.x) + Math.abs(nearestSeed.y - nextHead.y)
-          if (availableSpace > 10) {
-            // Only seek seeds if space allows
-            score += Math.max(0, 100 - distanceToSeed * 0.5)
-          }
-        }
-        score += Math.random() * 5 // Slight randomness
+        return { direction, score: -10000 }
       }
-      return { direction, score }
-    })
 
+      const availableSpace = calculateAvailableSpace(nextHead)
+      let score = 100 + availableSpace * 10
+
+      score += calculateLookaheadScore(direction, nextHead)
+      score += calculateSeedScore(nextHead, availableSpace)
+      score += Math.random() * 5 // Slight randomness
+
+      return { direction, score }
+    }
+
+    const directionScores = validDirections.map(scoreDirection)
     directionScores.sort((a, b) => b.score - a.score)
     for (const option of directionScores) {
       if (option.score > -5000) return option.direction
@@ -332,79 +344,54 @@ class LocalGame {
     return false // Still counting down
   }
 
-  // Call this method regularly from the client's game loop (e.g., setInterval)
-  update() {
-    if (this.gameState !== 'playing') return
+  _handleAITurn() {
+    if (!this.player2.isAI || !this.player2.alive) return
 
-    // AI makes a move
-    if (this.player2.isAI && this.player2.alive) {
-      const aiDirection = this._calculateAIDirection()
-      this.setPlayerDirection(2, aiDirection) // AI controls player 2
+    const aiDirection = this._calculateAIDirection()
+    this.setPlayerDirection(2, aiDirection)
 
-      // AI obstacle placement
-      if (this.canPlaceObstacle(2) && Math.random() < 0.05) {
-        // Reduced chance
-        const humanHead = this.player1.snake[0]
-        const aiTail = this.player2.snake[this.player2.snake.length - 1]
-        const distanceToHuman = Math.abs(aiTail.x - humanHead.x) + Math.abs(aiTail.y - humanHead.y)
-        if (distanceToHuman < 200 && this.player2.snake.length > 3) {
-          this.placeObstacle(2)
-        }
+    // AI obstacle placement
+    if (this.canPlaceObstacle(2) && Math.random() < 0.05) {
+      const humanHead = this.player1.snake[0]
+      const aiTail = this.player2.snake[this.player2.snake.length - 1]
+      const distanceToHuman = Math.abs(aiTail.x - humanHead.x) + Math.abs(aiTail.y - humanHead.y)
+      if (distanceToHuman < 200 && this.player2.snake.length > 3) {
+        this.placeObstacle(2)
       }
     }
+  }
 
-    const seedsEatenThisTurn = new Set()
+  _movePlayer(player, seedsEatenThisTurn) {
+    if (!player.alive) return { ...player }
 
-    // --- Move Players ---
-    const players = [this.player1, this.player2]
-    const newPlayerStates = []
+    player.direction = { ...player.nextDirection }
+    const head = { ...player.snake[0] }
+    head.x += player.direction.x * this.config.GRID_SIZE
+    head.y += player.direction.y * this.config.GRID_SIZE
 
-    for (const player of players) {
-      if (!player.alive) {
-        newPlayerStates.push({ ...player }) // Keep dead player's state
-        continue
-      }
+    const newSnake = [head, ...player.snake]
+    const eatenSeedIndex = this.seeds.findIndex(
+      (seed, index) => seed.x === head.x && seed.y === head.y && !seedsEatenThisTurn.has(index)
+    )
 
-      player.direction = { ...player.nextDirection } // Commit next direction
-      const head = { ...player.snake[0] }
-      head.x += player.direction.x * this.config.GRID_SIZE
-      head.y += player.direction.y * this.config.GRID_SIZE
-
-      const newSnake = [head, ...player.snake]
-      let ateSeed = false
-
-      const eatenSeedIndex = this.seeds.findIndex(
-        (seed, index) => seed.x === head.x && seed.y === head.y && !seedsEatenThisTurn.has(index)
-      )
-
-      if (eatenSeedIndex !== -1) {
-        seedsEatenThisTurn.add(eatenSeedIndex)
-        ateSeed = true
-      }
-
-      if (!ateSeed) {
-        if (newSnake.length > this.config.MAX_SNAKE_LENGTH || newSnake.length > 1) {
-          newSnake.pop()
-        }
-      }
-
-      newPlayerStates.push({
-        ...player,
-        snake: newSnake,
-        score: Math.max(0, newSnake.length - 1),
-      })
+    let ateSeed = false
+    if (eatenSeedIndex !== -1) {
+      seedsEatenThisTurn.add(eatenSeedIndex)
+      ateSeed = true
     }
 
-    // Update main player objects after calculating moves for both
-    this.player1 = newPlayerStates[0]
-    this.player2 = newPlayerStates[1]
-
-    // Remove eaten seeds
-    if (seedsEatenThisTurn.size > 0) {
-      this.seeds = this.seeds.filter((_, index) => !seedsEatenThisTurn.has(index))
+    if (!ateSeed && (newSnake.length > this.config.MAX_SNAKE_LENGTH || newSnake.length > 1)) {
+      newSnake.pop()
     }
 
-    // --- Check Collisions ---
+    return {
+      ...player,
+      snake: newSnake,
+      score: Math.max(0, newSnake.length - 1),
+    }
+  }
+
+  _handleCollisions() {
     if (this.player1.alive) {
       const collision1 = this._checkCollisionForPlayer(this.player1, this.player2)
       if (collision1) {
@@ -412,6 +399,7 @@ class LocalGame {
         this.player1.alive = false
       }
     }
+
     if (this.player2.alive) {
       const collision2 = this._checkCollisionForPlayer(this.player2, this.player1)
       if (collision2) {
@@ -419,14 +407,20 @@ class LocalGame {
         this.player2.alive = false
       }
     }
+  }
 
-    // --- Check Game Over ---
+  _checkGameOver() {
     const alivePlayers = [this.player1, this.player2].filter((p) => p.alive)
-    if (alivePlayers.length <= (this.isAIMode ? 0 : 1)) {
-      // If AI mode, game over if human dies. If 2P, if 1 or 0 alive.
+    const gameOverThreshold = this.isAIMode ? 0 : 1
+
+    if (alivePlayers.length <= gameOverThreshold) {
       this.gameState = 'gameOver'
+
       if (alivePlayers.length === 1) {
-        this.winner = { name: alivePlayers[0].name, id: alivePlayers[0] === this.player1 ? 1 : 2 }
+        this.winner = {
+          name: alivePlayers[0].name,
+          id: alivePlayers[0] === this.player1 ? 1 : 2,
+        }
       } else if (this.player1.score > this.player2.score) {
         this.winner = { name: this.player1.name, id: 1 }
       } else if (this.player2.score > this.player1.score) {
@@ -435,17 +429,36 @@ class LocalGame {
         this.winner = null // Draw
       }
     }
+  }
 
-    // --- Spawn new seeds periodically ---
-    // This should ideally be driven by the client's timer calling spawnSeed,
-    // but can be approximated here if the update is called at a regular interval.
-    // For more precise timing, client should call spawnSeed based on SEED_SPAWN_INTERVAL.
-    if (Date.now() - this.lastSeedSpawnTime > this.config.SEED_SPAWN_INTERVAL) {
-      if (this.seeds.length < this.config.MAX_SEEDS) {
-        this.spawnSeed()
-      }
+  _handleSeedSpawning() {
+    const shouldSpawnSeed = Date.now() - this.lastSeedSpawnTime > this.config.SEED_SPAWN_INTERVAL
+    if (shouldSpawnSeed && this.seeds.length < this.config.MAX_SEEDS) {
+      this.spawnSeed()
       this.lastSeedSpawnTime = Date.now()
     }
+  }
+
+  // Call this method regularly from the client's game loop (e.g., setInterval)
+  update() {
+    if (this.gameState !== 'playing') return
+
+    this._handleAITurn()
+
+    const seedsEatenThisTurn = new Set()
+
+    // Move players
+    this.player1 = this._movePlayer(this.player1, seedsEatenThisTurn)
+    this.player2 = this._movePlayer(this.player2, seedsEatenThisTurn)
+
+    // Remove eaten seeds
+    if (seedsEatenThisTurn.size > 0) {
+      this.seeds = this.seeds.filter((_, index) => !seedsEatenThisTurn.has(index))
+    }
+
+    this._handleCollisions()
+    this._checkGameOver()
+    this._handleSeedSpawning()
   }
 }
 

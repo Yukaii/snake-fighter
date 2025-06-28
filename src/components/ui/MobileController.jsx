@@ -55,6 +55,39 @@ const MobileController = ({
     [disabled]
   )
 
+  const calculateDirection = useCallback((deltaX, deltaY) => {
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      return deltaX > 0 ? 'right' : 'left'
+    }
+    return deltaY > 0 ? 'down' : 'up'
+  }, [])
+
+  const updateKnobPosition = useCallback((deltaX, deltaY, distance) => {
+    if (!knobRef.current) return
+
+    const maxDistance = 40
+    const clampedDistance = Math.min(distance, maxDistance)
+    const angle = Math.atan2(deltaY, deltaX)
+    const knobX = Math.cos(angle) * clampedDistance
+    const knobY = Math.sin(angle) * clampedDistance
+
+    knobRef.current.style.transform = `translate(${knobX}px, ${knobY}px)`
+  }, [])
+
+  const processDirectionChange = useCallback(
+    (deltaX, deltaY, distance) => {
+      const deadZone = 10
+      if (distance <= deadZone) return
+
+      const newDirection = calculateDirection(deltaX, deltaY)
+      if (newDirection !== currentDirection) {
+        setCurrentDirection(newDirection)
+        handleArrowPress(newDirection)
+      }
+    },
+    [calculateDirection, currentDirection, handleArrowPress]
+  )
+
   const handleJoystickMove = useCallback(
     (e) => {
       if (!isDragging || disabled) return
@@ -64,39 +97,12 @@ const MobileController = ({
       const touch = e.touches ? e.touches[0] : e
       const deltaX = touch.clientX - startPos.x
       const deltaY = touch.clientY - startPos.y
-
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-      const maxDistance = 40
 
-      if (distance > 10) {
-        // Dead zone
-        let newDirection = null
-
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // Horizontal movement
-          newDirection = deltaX > 0 ? 'right' : 'left'
-        } else {
-          // Vertical movement
-          newDirection = deltaY > 0 ? 'down' : 'up'
-        }
-
-        if (newDirection !== currentDirection) {
-          setCurrentDirection(newDirection)
-          handleArrowPress(newDirection)
-        }
-      }
-
-      // Update knob position
-      if (knobRef.current) {
-        const clampedDistance = Math.min(distance, maxDistance)
-        const angle = Math.atan2(deltaY, deltaX)
-        const knobX = Math.cos(angle) * clampedDistance
-        const knobY = Math.sin(angle) * clampedDistance
-
-        knobRef.current.style.transform = `translate(${knobX}px, ${knobY}px)`
-      }
+      processDirectionChange(deltaX, deltaY, distance)
+      updateKnobPosition(deltaX, deltaY, distance)
     },
-    [isDragging, startPos, currentDirection, handleArrowPress, disabled]
+    [isDragging, startPos, disabled, processDirectionChange, updateKnobPosition]
   )
 
   const handleJoystickEnd = useCallback(() => {
