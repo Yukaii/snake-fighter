@@ -16,8 +16,8 @@ defmodule SnakeFighterServerWeb.Router do
   # Socket.IO routes
   scope "/socket.io", SnakeFighterServerWeb do
     pipe_through :socket_io
-    
-    get "/", SocketIOWebSocket, []
+
+    get "/", SocketIOController, :polling
     post "/", SocketIOController, :polling
     options "/", SocketIOController, :options
   end

@@ -13,8 +13,9 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/socket.io': {
-        target: process.env.VITE_SERVER_URL || 'http://localhost:3000',
+        target: process.env.VITE_SERVER_URL || 'http://localhost:4000',
         ws: true,
+        changeOrigin: true,
       },
     },
   },
